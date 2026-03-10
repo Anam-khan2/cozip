@@ -15,6 +15,8 @@ import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
 import About from './pages/About';
 import Legal from './pages/Legal';
+import TrackOrder from './pages/TrackOrder';
+import OrderTrackingDetails from './pages/OrderTrackingDetails';
 
 export const router = createBrowserRouter([
   {
@@ -80,6 +82,14 @@ export const router = createBrowserRouter([
   {
     path: '/order-success',
     element: <OrderSuccess />,
+  },
+  {
+    path: '/track-order',
+    element: <TrackOrder />,
+  },
+  {
+    path: '/track-order/:orderNumber',
+    element: <OrderTrackingDetails />,
   },
   {
     path: '/admin',

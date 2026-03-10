@@ -228,7 +228,7 @@ export default function Cart() {
                     </p>
                   )}
 
-                  <Link to="/checkout" className="mobile-full-button rounded-full py-5 text-lg transition-all hover:scale-[1.02]" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 8px 32px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }} aria-label={`Proceed to checkout with total of $${total.toFixed(2)}`}>
+                  <Link to="/checkout" className="flex w-full items-center justify-center rounded-full px-6 py-5 text-center text-lg leading-tight transition-all hover:scale-[1.02]" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 8px 32px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }} aria-label={`Proceed to checkout with total of $${total.toFixed(2)}`}>
                     Proceed to Checkout
                   </Link>
 

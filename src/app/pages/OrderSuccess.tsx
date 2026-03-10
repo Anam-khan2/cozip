@@ -1,13 +1,19 @@
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { Check } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { showInfoToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { buildOrderTrackingPath, formatOrderNumber, getMostRecentTrackedOrder } from '../lib/orderTracking';
 
 export default function OrderSuccess() {
-  // Get order number from URL params or generate random
-  const orderNumber = '#CZP-10892';
+  const location = useLocation();
+  const recentOrder = getMostRecentTrackedOrder();
+  const orderNumber = typeof location.state === 'object' && location.state && 'orderNumber' in location.state && typeof location.state.orderNumber === 'string'
+    ? location.state.orderNumber
+    : recentOrder?.orderNumber ?? 'CZP-10892';
+  const formattedOrderNumber = formatOrderNumber(orderNumber);
+  const orderDetailsPath = buildOrderTrackingPath(orderNumber);
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
@@ -73,7 +79,7 @@ export default function OrderSuccess() {
                     fontWeight: 700 
                   }}
                 >
-                  {orderNumber}
+                  {formattedOrderNumber}
                 </span>
                 {' '}has been confirmed
               </p>
@@ -198,7 +204,7 @@ export default function OrderSuccess() {
 
             {/* View Order Details Link */}
             <Link
-              to="/dashboard"
+              to={orderDetailsPath}
               className="mx-auto block w-full max-w-md rounded-full border-2 py-4 text-base transition-all hover:opacity-70 mobile-full-button"
               style={{
                 backgroundColor: 'transparent',
@@ -207,7 +213,7 @@ export default function OrderSuccess() {
                 fontFamily: 'Inter, sans-serif',
                 fontWeight: 600,
               }}
-              aria-label="View order details in your dashboard"
+              aria-label={`View details for order ${formattedOrderNumber}`}
             >
               View Order Details
             </Link>

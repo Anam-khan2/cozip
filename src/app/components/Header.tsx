@@ -12,6 +12,7 @@ export function Header() {
   const wishlistCount = 4;
   const authSession = useAuthSession();
   const accountDestination = authSession?.isAuthenticated ? '/dashboard' : '/login';
+  const trackOrderDestination = '/track-order';
 
   useEffect(() => {
     setIsSidebarOpen(false);
@@ -35,7 +36,7 @@ export function Header() {
           <p>Free shipping on orders over 2000 RS</p>
           <div className="flex items-center justify-center gap-4 sm:justify-end">
             <Link to="/faq" className="transition-opacity hover:opacity-70">Shipping & Returns</Link>
-            <Link to={accountDestination} className="transition-opacity hover:opacity-70">Track Order</Link>
+            <Link to={trackOrderDestination} className="transition-opacity hover:opacity-70">Track Order</Link>
           </div>
         </div>
       </div>

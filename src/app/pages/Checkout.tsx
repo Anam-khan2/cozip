@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { createTrackedOrder, saveTrackedOrder } from '../lib/orderTracking';
 
 type CheckoutStep = 'address' | 'shipping' | 'payment';
 
@@ -80,8 +81,30 @@ export default function Checkout() {
       return;
     }
 
+    const trackedOrder = createTrackedOrder({
+      firstName: addressForm.firstName,
+      lastName: addressForm.lastName,
+      email: addressForm.email,
+      phone: addressForm.phone,
+      address: addressForm.address,
+      city: addressForm.city,
+      state: addressForm.state,
+      zipCode: addressForm.zipCode,
+      shippingMethod: shippingMethod as 'free' | 'standard' | 'express',
+      items: cartItems,
+      subtotal,
+      shippingCost,
+      tax,
+      total,
+    });
+
+    saveTrackedOrder(trackedOrder);
     showSuccessToast('Payment approved', 'Your order is confirmed and being prepared.');
-    navigate('/order-success');
+    navigate('/order-success', {
+      state: {
+        orderNumber: trackedOrder.orderNumber,
+      },
+    });
   };
 
   const steps: Array<{ key: CheckoutStep; label: string; step: number }> = [
