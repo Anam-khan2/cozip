@@ -7,6 +7,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { showInfoToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { signOut, useAuthSession } from '../lib/auth';
+import { PageSeo } from '../components/PageSeo';
 
 // Dashboard view type
 type DashboardView = 'overview' | 'orders' | 'wishlist' | 'settings';
@@ -108,6 +109,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="My Account" />
       {/* LEFT SIDEBAR - Navigation */}
       <aside 
         className="w-64 border-r flex-shrink-0 hidden lg:flex lg:flex-col"

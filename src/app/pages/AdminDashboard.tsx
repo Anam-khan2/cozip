@@ -6,6 +6,7 @@ import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
 import { BrandLogo } from '../components/BrandLogo';
 import { showInfoToast } from '../lib/notifications';
+import { PageSeo } from '../components/PageSeo';
 
 // Order type
 interface Order {
@@ -584,6 +585,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FAFAFA' }}>
+      <PageSeo title="Admin Dashboard" />
       {/* SIDEBAR */}
       <aside 
         className="w-64 border-r"

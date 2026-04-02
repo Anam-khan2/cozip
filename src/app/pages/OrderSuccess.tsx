@@ -5,6 +5,7 @@ import { Footer } from '../components/Footer';
 import { showInfoToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { buildOrderTrackingPath, formatOrderNumber, getMostRecentTrackedOrder } from '../lib/orderTracking';
+import { PageSeo } from '../components/PageSeo';
 
 export default function OrderSuccess() {
   const location = useLocation();
@@ -22,6 +23,7 @@ export default function OrderSuccess() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title={`Order Confirmed - ${formattedOrderNumber}`} />
       {/* Header */}
       <Header />
 

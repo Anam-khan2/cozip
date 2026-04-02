@@ -4,6 +4,7 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { PageSeo } from '../components/PageSeo';
 
 export default function Contact() {
   const [name, setName] = useState('');
@@ -28,6 +29,7 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Contact" />
       <Header />
 
       <main className="store-section">

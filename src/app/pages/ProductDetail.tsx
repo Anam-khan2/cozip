@@ -75,7 +75,7 @@ export default function ProductDetail() {
     );
   }
 
-  const seoTitle = product.metaTitle || product.name;
+  const seoTitle = product.metaTitle || `${product.name} | Cozip`;
   const seoDescription = product.metaDescription || product.description;
   const seoKeywords = product.metaKeywords || '';
   const seoImage = product.images[0] || '';

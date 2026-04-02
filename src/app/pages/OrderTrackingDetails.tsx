@@ -5,13 +5,16 @@ import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { EmptyState } from '../components/EmptyState';
 import { formatOrderNumber, getTrackedOrder } from '../lib/orderTracking';
+import { PageSeo } from '../components/PageSeo';
 
 export default function OrderTrackingDetails() {
   const { orderNumber = '' } = useParams();
   const trackedOrder = getTrackedOrder(orderNumber);
+  const pageTitle = trackedOrder ? `Track ${formatOrderNumber(trackedOrder.orderNumber)}` : 'Order Tracking';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title={pageTitle} />
       <Header />
 
       <main className="store-section">

@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { addToCart } from '../lib/cart';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { PageSeo } from '../components/PageSeo';
 
 export default function Shop() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +36,7 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Shop" />
       <Header />
 
       <main>

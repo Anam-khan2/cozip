@@ -6,6 +6,7 @@ import { Footer } from '../components/Footer';
 import { EmptyState } from '../components/EmptyState';
 import { showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { PageSeo } from '../components/PageSeo';
 
 interface WishlistItem {
   id: number;
@@ -52,6 +53,7 @@ export default function Wishlist() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Wishlist" />
       <Header />
 
       <main className="store-section">

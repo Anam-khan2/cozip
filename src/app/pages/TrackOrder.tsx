@@ -6,6 +6,7 @@ import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { buildOrderTrackingPath, getTrackedOrder, normalizeOrderNumber } from '../lib/orderTracking';
 import { showErrorToast } from '../lib/notifications';
+import { PageSeo } from '../components/PageSeo';
 
 export default function TrackOrder() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function TrackOrder() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Track Order" />
       <Header />
 
       <main className="store-section">

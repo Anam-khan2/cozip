@@ -4,6 +4,7 @@ import { Lock, Mail } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showInfoToast, showSuccessToast } from '../lib/notifications';
 import { signIn } from '../lib/auth';
+import { PageSeo } from '../components/PageSeo';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -37,10 +38,12 @@ export default function AdminLogin() {
   };
 
   return (
-    <main 
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ backgroundColor: '#FAF8F3' }}
-    >
+    <>
+      <PageSeo title="Admin Login" />
+      <main 
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ backgroundColor: '#FAF8F3' }}
+      >
       {/* Login Card */}
       <article 
         className="w-full max-w-md p-10 rounded-3xl"
@@ -224,6 +227,7 @@ export default function AdminLogin() {
           </Link>
         </footer>
       </article>
-    </main>
+      </main>
+    </>
   );
 }

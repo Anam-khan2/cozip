@@ -7,6 +7,7 @@ import { EmptyState } from '../components/EmptyState';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { useCart, updateCartQuantity, removeFromCart } from '../lib/cart';
+import { PageSeo } from '../components/PageSeo';
 
 export default function Cart() {
   const { items: cartItems, loading } = useCart();
@@ -42,6 +43,7 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Cart" />
       <Header />
 
       <main className="store-section">

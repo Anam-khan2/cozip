@@ -6,6 +6,7 @@ import { Footer } from '../components/Footer';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showInfoToast, showSuccessToast } from '../lib/notifications';
 import { signIn, signUp, useAuthSession } from '../lib/auth';
+import { PageSeo } from '../components/PageSeo';
 
 // Auth mode type
 type AuthMode = 'login' | 'register';
@@ -37,6 +38,8 @@ export default function Auth() {
   useEffect(() => {
     setMode(location.pathname === '/register' ? 'register' : 'login');
   }, [location.pathname]);
+
+  const pageTitle = mode === 'register' ? 'Create Account' : 'Login';
 
   useEffect(() => {
     if (authSession?.isAuthenticated) {
@@ -88,6 +91,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex">
+      <PageSeo title={pageTitle} />
       {/* LEFT SIDE - Beautiful Photo (50%) */}
       <aside 
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden"

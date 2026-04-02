@@ -2,28 +2,31 @@ import { Link, useLocation } from 'react-router';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { PageSeo } from '../components/PageSeo';
 
 export default function Legal() {
   const location = useLocation();
   const isTerms = location.pathname === '/terms';
   const isPrivacy = location.pathname === '/privacy';
+  const pageTitle = isTerms ? 'Terms & Conditions' : isPrivacy ? 'Privacy Policy' : 'Legal Information';
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title={pageTitle} />
       {/* Header */}
       <Header />
 
       {/* Main Content */}
       <main className="store-section">
         <div className="store-shell-narrow">
-        <Breadcrumbs items={[{ label: isTerms ? 'Terms & Conditions' : isPrivacy ? 'Privacy Policy' : 'Legal Information' }]} className="mb-6" />
+        <Breadcrumbs items={[{ label: pageTitle }]} className="mb-6" />
         {/* Page Header - Centered */}
         <header className="text-center mb-12">
           <h1 
             className="text-5xl mb-4"
             style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
           >
-            {isTerms ? 'Terms & Conditions' : isPrivacy ? 'Privacy Policy' : 'Legal Information'}
+            {pageTitle}
           </h1>
           
           <p 

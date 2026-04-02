@@ -3,10 +3,12 @@ import { Heart, Leaf, Sparkles } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { PageSeo } from '../components/PageSeo';
 
 export default function About() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="About" />
       {/* Header */}
       <Header />
 

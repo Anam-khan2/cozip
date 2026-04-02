@@ -8,6 +8,7 @@ import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { createTrackedOrder, saveTrackedOrder } from '../lib/orderTracking';
 import { useCart, clearCart } from '../lib/cart';
+import { PageSeo } from '../components/PageSeo';
 
 // Stripe test/sandbox publishable key
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
@@ -89,6 +90,11 @@ export default function Checkout() {
   const tax = subtotal * taxRate;
   const shippingCost = shippingMethod === 'express' ? 12.99 : shippingMethod === 'standard' ? 5.99 : 0;
   const total = subtotal + tax + shippingCost;
+  const checkoutTitle = currentStep === 'address'
+    ? 'Checkout - Address'
+    : currentStep === 'shipping'
+      ? 'Checkout - Shipping'
+      : 'Checkout - Payment';
 
   const completeOrder = () => {
     const trackedOrder = createTrackedOrder({
@@ -151,6 +157,7 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title={checkoutTitle} />
       <header className="border-b px-4 py-6 md:px-6 lg:px-12" style={{ borderColor: '#D4C4B0' }}>
         <div className="store-shell">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

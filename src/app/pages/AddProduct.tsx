@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, ChevronLeft, ChevronRight, Upload, X } from 'lucide-react';
 import { createProduct, uploadProductImages } from '../lib/products';
+import { PageSeo } from '../components/PageSeo';
 
 type ProductFormState = {
   productName: string;
@@ -189,6 +190,7 @@ export default function AddProduct() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAFAFA' }}>
+      <PageSeo title="Add Product" />
       <header 
         className="border-b px-8 py-6"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}

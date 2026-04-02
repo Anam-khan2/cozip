@@ -6,6 +6,7 @@ import { useProducts } from '../hooks/useProducts';
 import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { addToCart } from '../lib/cart';
+import { PageSeo } from '../components/PageSeo';
 
 export default function Home() {
   const { data: products, error, loading } = useProducts({ featuredOnly: true, limit: 5 });
@@ -26,6 +27,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <PageSeo title="Home" />
       <Header />
 
       <main>
