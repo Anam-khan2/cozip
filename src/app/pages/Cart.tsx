@@ -6,47 +6,10 @@ import { Footer } from '../components/Footer';
 import { EmptyState } from '../components/EmptyState';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-
-interface CartItem {
-  id: number;
-  productId: number;
-  name: string;
-  variant: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
+import { useCart, updateCartQuantity, removeFromCart } from '../lib/cart';
 
 export default function Cart() {
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    {
-      id: 1,
-      productId: 1,
-      name: 'Handmade Aesthetic Pastel Cloud Mug - Limited 2026 Edition',
-      variant: 'Cream',
-      price: 24.99,
-      quantity: 2,
-      image: 'https://images.unsplash.com/photo-1674317872332-ca9c2cd00953?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZXN0aGV0aWMlMjBjZXJhbWljJTIwbXVnJTIwY29mZmVlfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    {
-      id: 2,
-      productId: 2,
-      name: 'Pink Pastel Mug',
-      variant: 'Blush Pink',
-      price: 22.99,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1588165231518-b4b22bfa0ddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaW5rJTIwYWVzdGhldGljJTIwY29mZmVlJTIwbXVnfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    {
-      id: 3,
-      productId: 3,
-      name: 'Cute Pastel Tea Mug',
-      variant: 'Mint Green',
-      price: 26.99,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1617117646043-5ce463db0be7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjdXRlJTIwcGFzdGVsJTIwbXVnJTIwdGVhfGVufDF8fHx8MTc3MjgzNDAxN3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-  ]);
+  const { items: cartItems, loading } = useCart();
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
 
@@ -56,16 +19,13 @@ export default function Cart() {
   const shippingCost = subtotal > 50 ? 0 : 5.99;
   const total = subtotal + tax + shippingCost - appliedDiscount;
 
-  const updateQuantity = (itemId: number, newQuantity: number) => {
-    if (newQuantity < 1) {
-      return;
-    }
-
-    setCartItems((items) => items.map((item) => (item.id === itemId ? { ...item, quantity: newQuantity } : item)));
+  const updateQuantity = (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    void updateCartQuantity(itemId, newQuantity);
   };
 
-  const removeItem = (itemId: number) => {
-    setCartItems((items) => items.filter((item) => item.id !== itemId));
+  const removeItem = (itemId: string) => {
+    void removeFromCart(itemId);
   };
 
   const applyDiscount = (event: React.FormEvent) => {
@@ -92,11 +52,23 @@ export default function Cart() {
               Shopping Cart
             </h1>
             <p className="text-sm md:text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-              {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
+              {loading ? 'Loading…' : `${cartItems.length} ${cartItems.length === 1 ? 'item' : 'items'} in your cart`}
             </p>
           </header>
 
-          {cartItems.length === 0 ? (
+          {loading ? (
+            <div className="space-y-6">
+              {[1, 2].map((n) => (
+                <div key={n} className="flex gap-6 animate-pulse">
+                  <div className="h-24 w-24 rounded-xl" style={{ backgroundColor: '#EEF2EE' }} />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-5 w-3/4 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <div className="h-4 w-1/3 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : cartItems.length === 0 ? (
             <EmptyState
               icon={<ShoppingCart className="h-8 w-8" aria-hidden="true" />}
               title="Your cart is empty"
@@ -124,9 +96,6 @@ export default function Cart() {
                               {item.name}
                             </h3>
                           </Link>
-                          <p className="mb-3 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-                            Variant: {item.variant}
-                          </p>
                           <p className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }} itemProp="offers" itemScope itemType="https://schema.org/Offer">
                             <meta itemProp="price" content={item.price.toString()} />
                             <meta itemProp="priceCurrency" content="USD" />

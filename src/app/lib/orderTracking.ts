@@ -1,3 +1,5 @@
+import { getSupabaseClient } from './supabase';
+
 type ShippingMethod = 'free' | 'standard' | 'express';
 
 export type TrackedOrderItem = {
@@ -61,7 +63,7 @@ type CreateTrackedOrderInput = {
   total: number;
 };
 
-const STORAGE_KEY = 'cozip-guest-orders';
+const STORAGE_KEY = 'snugsip-guest-orders';
 
 const sampleOrders: TrackedOrder[] = [
   {
@@ -217,6 +219,71 @@ export function getTrackedOrder(orderNumber: string) {
   return allOrders.find((order) => normalizeOrderNumber(order.orderNumber) === normalizedOrderNumber) ?? null;
 }
 
+export async function getTrackedOrderFromSupabase(orderNumber: string): Promise<TrackedOrder | null> {
+  try {
+    const supabase = getSupabaseClient();
+    const normalized = normalizeOrderNumber(orderNumber);
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('order_number', normalized)
+      .maybeSingle();
+
+    if (!data) return null;
+    return mapRowToTrackedOrder(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function getUserOrdersFromSupabase(): Promise<TrackedOrder[]> {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    return (data ?? []).map(mapRowToTrackedOrder);
+  } catch {
+    return [];
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapRowToTrackedOrder(row: any): TrackedOrder {
+  return {
+    orderNumber: row.order_number,
+    customerName: row.customer_name,
+    email: row.email,
+    phone: row.phone,
+    shippingAddressLine: row.shipping_address,
+    city: row.city,
+    state: row.state,
+    zipCode: row.zip_code,
+    shippingMethod: row.shipping_method,
+    status: row.status,
+    statusDescription: row.status_description,
+    carrier: row.carrier,
+    trackingCode: row.tracking_code,
+    originCity: row.origin_city,
+    destinationCity: row.destination_city,
+    estimatedDelivery: row.estimated_delivery,
+    orderPlacedAt: row.order_placed_at,
+    items: row.items,
+    subtotal: row.subtotal,
+    shippingCost: row.shipping_cost,
+    tax: row.tax,
+    total: row.total,
+    timeline: row.timeline,
+  };
+}
+
 export function getMostRecentTrackedOrder() {
   const storedOrders = readStoredOrders();
   return storedOrders[0] ?? sampleOrders[0] ?? null;
@@ -229,6 +296,49 @@ export function saveTrackedOrder(order: TrackedOrder) {
   );
 
   writeStoredOrders([order, ...remainingOrders].slice(0, 10));
+
+  // Also persist to Supabase (fire-and-forget)
+  void saveOrderToSupabase(order);
+}
+
+async function saveOrderToSupabase(order: TrackedOrder) {
+  try {
+    const supabase = getSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('orders').upsert(
+      {
+        order_number: order.orderNumber,
+        user_id: user.id,
+        customer_name: order.customerName,
+        email: order.email,
+        phone: order.phone,
+        shipping_address: order.shippingAddressLine,
+        city: order.city,
+        state: order.state,
+        zip_code: order.zipCode,
+        shipping_method: order.shippingMethod,
+        status: order.status,
+        status_description: order.statusDescription,
+        carrier: order.carrier,
+        tracking_code: order.trackingCode,
+        origin_city: order.originCity,
+        destination_city: order.destinationCity,
+        estimated_delivery: order.estimatedDelivery,
+        order_placed_at: order.orderPlacedAt,
+        items: order.items,
+        subtotal: order.subtotal,
+        shipping_cost: order.shippingCost,
+        tax: order.tax,
+        total: order.total,
+        timeline: order.timeline,
+      },
+      { onConflict: 'order_number' }
+    );
+  } catch {
+    // Supabase persistence is best-effort; localStorage is the fallback
+  }
 }
 
 export function createTrackedOrder(input: CreateTrackedOrderInput) {

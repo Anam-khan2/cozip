@@ -55,6 +55,10 @@ interface EditProductFormState {
   stock: string;
   category: string;
   shippingInfo: string;
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
   isFeatured: boolean;
   images: string[];
 }
@@ -295,6 +299,10 @@ export default function AdminDashboard() {
         stock: product.stock.toString(),
         category: product.category ?? '',
         shippingInfo: product.shipping,
+        slug: product.slug ?? '',
+        metaTitle: product.metaTitle ?? '',
+        metaDescription: product.metaDescription ?? '',
+        metaKeywords: product.metaKeywords ?? '',
         isFeatured: product.isFeatured,
         images: product.images,
       });
@@ -452,6 +460,10 @@ export default function AdminDashboard() {
         images,
         isFeatured: editProduct.isFeatured,
         shippingInfo: editProduct.shippingInfo,
+        slug: editProduct.slug,
+        metaTitle: editProduct.metaTitle,
+        metaDescription: editProduct.metaDescription,
+        metaKeywords: editProduct.metaKeywords,
       });
 
       if (removedExistingImages.length > 0) {
@@ -2688,6 +2700,28 @@ export default function AdminDashboard() {
                   className="w-full rounded-xl px-4 py-3"
                   style={{ border: '2px solid #E5E7EB', fontFamily: 'Inter, sans-serif', color: '#4A5D45', outline: 'none', resize: 'none' }}
                 />
+              </div>
+
+              <div>
+                <h3 className="text-lg mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>SEO & Metadata</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Slug</label>
+                    <input type="text" value={editProduct.slug} onChange={(e) => handleEditFieldChange('slug', e.target.value)} placeholder="cute-bow-glass-sipper" className="w-full rounded-xl px-4 py-3" style={{ border: '2px solid #E5E7EB', fontFamily: 'Inter, sans-serif', color: '#4A5D45', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Meta Title</label>
+                    <input type="text" value={editProduct.metaTitle} onChange={(e) => handleEditFieldChange('metaTitle', e.target.value)} placeholder="Cute Bow Glass Sipper | Cozip" className="w-full rounded-xl px-4 py-3" style={{ border: '2px solid #E5E7EB', fontFamily: 'Inter, sans-serif', color: '#4A5D45', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Meta Description</label>
+                    <textarea rows={3} value={editProduct.metaDescription} onChange={(e) => handleEditFieldChange('metaDescription', e.target.value)} placeholder="A short description for search engines..." className="w-full rounded-xl px-4 py-3" style={{ border: '2px solid #E5E7EB', fontFamily: 'Inter, sans-serif', color: '#4A5D45', outline: 'none', resize: 'none' }} />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Meta Keywords</label>
+                    <input type="text" value={editProduct.metaKeywords} onChange={(e) => handleEditFieldChange('metaKeywords', e.target.value)} placeholder="glass sipper, cute mug, cozip" className="w-full rounded-xl px-4 py-3" style={{ border: '2px solid #E5E7EB', fontFamily: 'Inter, sans-serif', color: '#4A5D45', outline: 'none' }} />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">

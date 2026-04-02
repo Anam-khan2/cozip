@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { useProducts } from '../hooks/useProducts';
 import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
 import { EmptyState } from '../components/EmptyState';
-import { showInfoToast, showSuccessToast } from '../lib/notifications';
+import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
+import { addToCart } from '../lib/cart';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 
 export default function Shop() {
@@ -17,8 +18,14 @@ export default function Shop() {
     showInfoToast('Saved for later', `${productName} was added to your wishlist.`);
   };
 
-  const handleAddToCart = (productName: string) => {
-    showSuccessToast('Added to cart', `${productName} is ready for checkout.`);
+  const handleAddToCart = async (productId: string, productName: string) => {
+    try {
+      await addToCart(productId);
+      showSuccessToast('Added to cart', `${productName} is ready for checkout.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to add item to cart.';
+      showErrorToast('Cart error', message);
+    }
   };
 
   // Filter products based on search
@@ -124,7 +131,7 @@ export default function Shop() {
                       </p>
                       <button 
                         type="button"
-                        onClick={() => handleAddToCart(product.name)}
+                        onClick={() => handleAddToCart(product.id, product.name)}
                         className="w-full py-3 rounded-full transition-all hover:scale-105"
                         style={{ 
                           backgroundColor: '#7A9070',

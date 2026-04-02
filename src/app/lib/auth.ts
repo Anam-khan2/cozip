@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-
-const AUTH_STORAGE_KEY = 'cozip-auth-session';
-const AUTH_EVENT_NAME = 'cozip-auth-changed';
+import { getSupabaseClient } from './supabase';
 
 export interface AuthSession {
   isAuthenticated: boolean;
@@ -10,67 +8,117 @@ export interface AuthSession {
   email: string;
 }
 
-function readAuthSession(): AuthSession | null {
-  if (typeof window === 'undefined') {
+function userToAuthSession(user: { email?: string; user_metadata?: Record<string, unknown> } | null): AuthSession | null {
+  if (!user || !user.email) {
     return null;
   }
 
-  const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY);
+  const meta = user.user_metadata ?? {};
+  const firstName = (meta.first_name as string) || user.email.split('@')[0]?.split(/[._-]/)[0] || 'User';
 
-  if (!rawSession) {
-    return null;
+  return {
+    isAuthenticated: true,
+    firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1),
+    lastName: (meta.last_name as string) || undefined,
+    email: user.email,
+  };
+}
+
+export async function signIn(email: string, password: string) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    throw error;
   }
 
-  try {
-    return JSON.parse(rawSession) as AuthSession;
-  } catch {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
+  return userToAuthSession(data.user);
+}
+
+export async function signUp(email: string, password: string, metadata?: { firstName?: string; lastName?: string }) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        first_name: metadata?.firstName ?? '',
+        last_name: metadata?.lastName ?? '',
+      },
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return userToAuthSession(data.user);
+}
+
+export async function signOut() {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw error;
   }
 }
 
-function dispatchAuthChanged() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event(AUTH_EVENT_NAME));
-  }
+export async function getAuthSession(): Promise<AuthSession | null> {
+  const supabase = getSupabaseClient();
+  const { data } = await supabase.auth.getSession();
+  return userToAuthSession(data.session?.user ?? null);
 }
 
-export function saveAuthSession(session: AuthSession) {
-  if (typeof window === 'undefined') {
-    return;
+export async function getUserRole(): Promise<string | null> {
+  const supabase = getSupabaseClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const userId = sessionData.session?.user?.id;
+
+  if (!userId) {
+    return null;
   }
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
-  dispatchAuthChanged();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data.role as string;
+}
+
+/** Keep old names working for existing consumers */
+export function saveAuthSession(_session: AuthSession) {
+  // No-op — Supabase manages sessions automatically
 }
 
 export function clearAuthSession() {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
-  dispatchAuthChanged();
-}
-
-export function getAuthSession() {
-  return readAuthSession();
+  void signOut();
 }
 
 export function useAuthSession() {
-  const [session, setSession] = useState<AuthSession | null>(() => readAuthSession());
+  const [session, setSession] = useState<AuthSession | null>(null);
 
   useEffect(() => {
-    const syncSession = () => {
-      setSession(readAuthSession());
-    };
+    const supabase = getSupabaseClient();
 
-    window.addEventListener('storage', syncSession);
-    window.addEventListener(AUTH_EVENT_NAME, syncSession);
+    // Read current session on mount
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(userToAuthSession(data.session?.user ?? null));
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, supabaseSession) => {
+      setSession(userToAuthSession(supabaseSession?.user ?? null));
+    });
 
     return () => {
-      window.removeEventListener('storage', syncSession);
-      window.removeEventListener(AUTH_EVENT_NAME, syncSession);
+      subscription.unsubscribe();
     };
   }, []);
 

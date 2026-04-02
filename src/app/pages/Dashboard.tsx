@@ -6,7 +6,7 @@ import { Footer } from '../components/Footer';
 import { BrandLogo } from '../components/BrandLogo';
 import { showInfoToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { clearAuthSession, useAuthSession } from '../lib/auth';
+import { signOut, useAuthSession } from '../lib/auth';
 
 // Dashboard view type
 type DashboardView = 'overview' | 'orders' | 'wishlist' | 'settings';
@@ -93,9 +93,9 @@ export default function Dashboard() {
   };
 
   // Handle logout
-  const handleLogout = () => {
-    clearAuthSession();
-    showSuccessToast('Signed out successfully.', 'Your demo session has ended.');
+  const handleLogout = async () => {
+    await signOut();
+    showSuccessToast('Signed out successfully.', 'See you next time.');
     navigate('/');
   };
 

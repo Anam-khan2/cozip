@@ -10,6 +10,8 @@ import OrderSuccess from './pages/OrderSuccess';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminLogin from './pages/AdminLogin';
 import AddProduct from './pages/AddProduct';
+import ProtectedRoute from './components/ProtectedRoute';
+import AuthGuard from './components/AuthGuard';
 import Wishlist from './pages/Wishlist';
 import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
@@ -37,7 +39,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/checkout',
-    element: <Checkout />,
+    element: <AuthGuard><Checkout /></AuthGuard>,
   },
   {
     path: '/login',
@@ -81,7 +83,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/order-success',
-    element: <OrderSuccess />,
+    element: <AuthGuard><OrderSuccess /></AuthGuard>,
   },
   {
     path: '/track-order',
@@ -93,7 +95,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/admin',
-    element: <AdminDashboard />,
+    element: <ProtectedRoute><AdminDashboard /></ProtectedRoute>,
   },
   {
     path: '/admin/login',
@@ -101,6 +103,6 @@ export const router = createBrowserRouter([
   },
   {
     path: '/admin/add-product',
-    element: <AddProduct />,
+    element: <ProtectedRoute><AddProduct /></ProtectedRoute>,
   },
 ]);

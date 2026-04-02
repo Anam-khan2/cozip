@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { BrandLogo } from './BrandLogo';
 import { isNavigationLinkActive, mainNavigationLinks } from '../lib/navigation';
 import { useAuthSession } from '../lib/auth';
+import { useCart } from '../lib/cart';
 
 export function Header() {
-  const [cartCount] = useState(2); // Demo cart count
+  const { count: cartCount } = useCart();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const wishlistCount = 4;

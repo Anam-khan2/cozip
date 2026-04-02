@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, Navigate } from 'react-router';
 import { Check } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
@@ -9,9 +9,14 @@ import { buildOrderTrackingPath, formatOrderNumber, getMostRecentTrackedOrder } 
 export default function OrderSuccess() {
   const location = useLocation();
   const recentOrder = getMostRecentTrackedOrder();
-  const orderNumber = typeof location.state === 'object' && location.state && 'orderNumber' in location.state && typeof location.state.orderNumber === 'string'
+  const orderNumberFromState = typeof location.state === 'object' && location.state && 'orderNumber' in location.state && typeof location.state.orderNumber === 'string'
     ? location.state.orderNumber
-    : recentOrder?.orderNumber ?? 'CZP-10892';
+    : null;
+  const orderNumber = orderNumberFromState ?? recentOrder?.orderNumber ?? null;
+
+  if (!orderNumber) {
+    return <Navigate to="/shop" replace />;
+  }
   const formattedOrderNumber = formatOrderNumber(orderNumber);
   const orderDetailsPath = buildOrderTrackingPath(orderNumber);
 

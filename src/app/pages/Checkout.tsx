@@ -1,24 +1,74 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Check } from 'lucide-react';
+import { Check, CreditCard, Banknote } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { createTrackedOrder, saveTrackedOrder } from '../lib/orderTracking';
+import { useCart, clearCart } from '../lib/cart';
+
+// Stripe test/sandbox publishable key
+const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
 type CheckoutStep = 'address' | 'shipping' | 'payment';
+type PaymentMethod = 'stripe' | 'cod';
 
-interface CartItem {
-  id: number;
-  productId: number;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
+const CARD_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      fontSize: '16px',
+      fontFamily: 'Inter, sans-serif',
+      color: '#4A5D45',
+      '::placeholder': { color: '#A0B89A' },
+    },
+    invalid: { color: '#e53e3e' },
+  },
+};
+
+function StripeCardForm({ total, isProcessing, onSubmit, onBack }: { total: number; isProcessing: boolean; onSubmit: () => void; onBack: () => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    // Sandbox mode — skip real Stripe API calls, just simulate
+    void onSubmit();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="rounded-xl p-6" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
+        <label className="mb-3 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>Card Details</label>
+        <div className="rounded-lg px-4 py-3" style={{ border: '1px solid #D4C4B0', backgroundColor: '#FAF8F3' }}>
+          <CardElement options={CARD_ELEMENT_OPTIONS} />
+        </div>
+        <p className="mt-3 text-xs" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
+          🧪 Sandbox mode — use test card <strong>4242 4242 4242 4242</strong>, any future expiry &amp; any CVC.
+        </p>
+      </div>
+
+      <div className="rounded-xl p-4" style={{ backgroundColor: '#FAF8F3', border: '1px solid #D4C4B0' }}>
+        <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>🔒 Your payment information is secure and encrypted</p>
+      </div>
+
+      <div className="flex flex-col gap-4 sm:flex-row">
+        <button type="button" onClick={onBack} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+          Back
+        </button>
+        <button type="submit" disabled={isProcessing || !stripe} className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+          {isProcessing ? 'Processing…' : `Pay $${total.toFixed(2)}`}
+        </button>
+      </div>
+    </form>
+  );
 }
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const { items: cartItems, loading: cartLoading } = useCart();
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [addressForm, setAddressForm] = useState({
     email: '',
@@ -31,31 +81,8 @@ export default function Checkout() {
     phone: '',
   });
   const [shippingMethod, setShippingMethod] = useState('standard');
-  const [paymentForm, setPaymentForm] = useState({
-    cardNumber: '',
-    cardName: '',
-    expiryDate: '',
-    cvv: '',
-  });
-
-  const cartItems: CartItem[] = [
-    {
-      id: 1,
-      productId: 1,
-      name: 'Handmade Aesthetic Pastel Cloud Mug - Limited 2026 Edition',
-      price: 24.99,
-      quantity: 2,
-      image: 'https://images.unsplash.com/photo-1674317872332-ca9c2cd00953?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZXN0aGV0aWMlMjBjZXJhbWljJTIwbXVnJTIwY29mZmVlfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    {
-      id: 2,
-      productId: 2,
-      name: 'Pink Pastel Mug',
-      price: 22.99,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1588165231518-b4b22bfa0ddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaW5rJTIwYWVzdGhldGljJTIwY29mZmVlJTIwbXVnfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-  ];
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxRate = 0.08;
@@ -63,24 +90,7 @@ export default function Checkout() {
   const shippingCost = shippingMethod === 'express' ? 12.99 : shippingMethod === 'standard' ? 5.99 : 0;
   const total = subtotal + tax + shippingCost;
 
-  const handleAddressSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    setCurrentStep('shipping');
-  };
-
-  const handleShippingSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    setCurrentStep('payment');
-  };
-
-  const handlePaymentSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (paymentForm.cardNumber.replace(/\s+/g, '').length < 16 || paymentForm.expiryDate.length < 5 || paymentForm.cvv.length < 3) {
-      showErrorToast('Payment Failed', 'Please review your card number, expiry date, and CVV before placing the order.');
-      return;
-    }
-
+  const completeOrder = () => {
     const trackedOrder = createTrackedOrder({
       firstName: addressForm.firstName,
       lastName: addressForm.lastName,
@@ -99,12 +109,38 @@ export default function Checkout() {
     });
 
     saveTrackedOrder(trackedOrder);
-    showSuccessToast('Payment approved', 'Your order is confirmed and being prepared.');
+    void clearCart();
+    showSuccessToast('Order confirmed', `Your order ${trackedOrder.orderNumber} is being prepared.`);
     navigate('/order-success', {
-      state: {
-        orderNumber: trackedOrder.orderNumber,
-      },
+      state: { orderNumber: trackedOrder.orderNumber },
     });
+  };
+
+  const handleAddressSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setCurrentStep('shipping');
+  };
+
+  const handleShippingSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setCurrentStep('payment');
+  };
+
+  const handleStripeSubmit = async () => {
+    setIsProcessing(true);
+    // Simulate 2-second Stripe processing (no real backend)
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setIsProcessing(false);
+    completeOrder();
+  };
+
+  const handleCodSubmit = () => {
+    setIsProcessing(true);
+    // Brief delay for UX feedback
+    setTimeout(() => {
+      setIsProcessing(false);
+      completeOrder();
+    }, 500);
   };
 
   const steps: Array<{ key: CheckoutStep; label: string; step: number }> = [
@@ -258,45 +294,69 @@ export default function Checkout() {
               )}
 
               {currentStep === 'payment' && (
-                <form onSubmit={handlePaymentSubmit} className="max-w-2xl space-y-6">
-                  <fieldset>
-                    <legend className="mb-6 text-2xl" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>Payment Information</legend>
+                <div className="max-w-2xl space-y-6">
+                  <h2 className="text-2xl" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>Payment Method</h2>
 
-                    <div className="mb-5">
-                      <label htmlFor="cardNumber" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>Card Number</label>
-                      <input type="text" id="cardNumber" value={paymentForm.cardNumber} onChange={(event) => setPaymentForm({ ...paymentForm, cardNumber: event.target.value })} required className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="1234 5678 9012 3456" maxLength={19} inputMode="numeric" autoComplete="cc-number" />
-                    </div>
-
-                    <div className="mb-5">
-                      <label htmlFor="cardName" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>Cardholder Name</label>
-                      <input type="text" id="cardName" value={paymentForm.cardName} onChange={(event) => setPaymentForm({ ...paymentForm, cardName: event.target.value })} required className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="Name on card" autoComplete="cc-name" />
-                    </div>
-
-                    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div>
-                        <label htmlFor="expiryDate" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>Expiry Date</label>
-                        <input type="text" id="expiryDate" value={paymentForm.expiryDate} onChange={(event) => setPaymentForm({ ...paymentForm, expiryDate: event.target.value })} required className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="MM/YY" maxLength={5} autoComplete="cc-exp" />
+                  {/* Method selector */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="radiogroup" aria-label="Payment method">
+                    <label className="flex cursor-pointer items-center gap-4 rounded-xl p-5 transition-all" style={{ backgroundColor: '#FFFFFF', border: paymentMethod === 'stripe' ? '2px solid #7A9070' : '2px solid #D4C4B0', boxShadow: paymentMethod === 'stripe' ? '0 4px 16px rgba(122, 144, 112, 0.15)' : 'none' }}>
+                      <input type="radio" name="paymentMethod" value="stripe" checked={paymentMethod === 'stripe'} onChange={() => setPaymentMethod('stripe')} className="h-5 w-5" style={{ accentColor: '#7A9070' }} />
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="h-5 w-5" style={{ color: '#5A7050' }} aria-hidden="true" />
+                        <div>
+                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Credit Card</p>
+                          <p className="text-xs" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Stripe Sandbox</p>
+                        </div>
                       </div>
-                      <div>
-                        <label htmlFor="cvv" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>CVV</label>
-                        <input type="text" id="cvv" value={paymentForm.cvv} onChange={(event) => setPaymentForm({ ...paymentForm, cvv: event.target.value })} required className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="123" maxLength={4} inputMode="numeric" autoComplete="cc-csc" />
-                      </div>
-                    </div>
-                  </fieldset>
+                    </label>
 
-                  <div className="rounded-xl p-4" style={{ backgroundColor: '#FAF8F3', border: '1px solid #D4C4B0' }}>
-                    <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>🔒 Your payment information is secure and encrypted</p>
+                    <label className="flex cursor-pointer items-center gap-4 rounded-xl p-5 transition-all" style={{ backgroundColor: '#FFFFFF', border: paymentMethod === 'cod' ? '2px solid #7A9070' : '2px solid #D4C4B0', boxShadow: paymentMethod === 'cod' ? '0 4px 16px rgba(122, 144, 112, 0.15)' : 'none' }}>
+                      <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="h-5 w-5" style={{ accentColor: '#7A9070' }} />
+                      <div className="flex items-center gap-3">
+                        <Banknote className="h-5 w-5" style={{ color: '#5A7050' }} aria-hidden="true" />
+                        <div>
+                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Cash on Delivery</p>
+                          <p className="text-xs" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Pay when you receive</p>
+                        </div>
+                      </div>
+                    </label>
                   </div>
 
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <button type="button" onClick={() => setCurrentStep('shipping')} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
-                      Back
-                    </button>
-                    <button type="submit" className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
-                      Place Order
-                    </button>
-                  </div>
-                </form>
+                  {/* Stripe card form */}
+                  {paymentMethod === 'stripe' && (
+                    <Elements stripe={stripePromise}>
+                      <StripeCardForm
+                        total={total}
+                        isProcessing={isProcessing}
+                        onSubmit={handleStripeSubmit}
+                        onBack={() => setCurrentStep('shipping')}
+                      />
+                    </Elements>
+                  )}
+
+                  {/* COD confirmation */}
+                  {paymentMethod === 'cod' && (
+                    <div className="space-y-6">
+                      <div className="rounded-xl p-6" style={{ backgroundColor: '#FAF8F3', border: '1px solid #D4C4B0' }}>
+                        <h3 className="mb-3 text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Cash on Delivery</h3>
+                        <ul className="space-y-2 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', lineHeight: 1.7 }}>
+                          <li>• You will pay <strong style={{ color: '#5A7050' }}>${total.toFixed(2)}</strong> when your order arrives.</li>
+                          <li>• Please have the exact amount ready for the delivery person.</li>
+                          <li>• Your order will be confirmed immediately.</li>
+                        </ul>
+                      </div>
+
+                      <div className="flex flex-col gap-4 sm:flex-row">
+                        <button type="button" onClick={() => setCurrentStep('shipping')} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+                          Back
+                        </button>
+                        <button type="button" onClick={handleCodSubmit} disabled={isProcessing} className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+                          {isProcessing ? 'Confirming…' : 'Confirm Order (COD)'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </section>
 

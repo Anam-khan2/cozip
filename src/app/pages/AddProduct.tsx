@@ -15,6 +15,10 @@ type ProductFormState = {
   weight: string;
   care: string;
   shippingInfo: string;
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
   isFeatured: boolean;
 };
 
@@ -37,6 +41,10 @@ const initialFormState: ProductFormState = {
   weight: '',
   care: '',
   shippingInfo: '',
+  slug: '',
+  metaTitle: '',
+  metaDescription: '',
+  metaKeywords: '',
   isFeatured: false,
 };
 
@@ -156,6 +164,10 @@ export default function AddProduct() {
         weight: form.weight,
         care: form.care,
         shippingInfo: form.shippingInfo,
+        slug: form.slug,
+        metaTitle: form.metaTitle,
+        metaDescription: form.metaDescription,
+        metaKeywords: form.metaKeywords,
       });
 
       navigate('/admin', { replace: true });
@@ -395,6 +407,36 @@ export default function AddProduct() {
                   onFocus={(e) => e.target.style.borderColor = '#7A9070'}
                   onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
                 />
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>SEO & Metadata</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="slug" className="block text-sm mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>
+                      Slug
+                    </label>
+                    <input type="text" id="slug" value={form.slug} onChange={(e) => updateForm('slug', e.target.value)} placeholder="cute-bow-glass-sipper" className="w-full px-4 py-3 rounded-xl transition-all" style={inputStyle} onFocus={(e) => e.target.style.borderColor = '#7A9070'} onBlur={(e) => e.target.style.borderColor = '#E5E7EB'} />
+                  </div>
+                  <div>
+                    <label htmlFor="metaTitle" className="block text-sm mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>
+                      Meta Title
+                    </label>
+                    <input type="text" id="metaTitle" value={form.metaTitle} onChange={(e) => updateForm('metaTitle', e.target.value)} placeholder="Cute Bow Glass Sipper | Cozip" className="w-full px-4 py-3 rounded-xl transition-all" style={inputStyle} onFocus={(e) => e.target.style.borderColor = '#7A9070'} onBlur={(e) => e.target.style.borderColor = '#E5E7EB'} />
+                  </div>
+                  <div>
+                    <label htmlFor="metaDescription" className="block text-sm mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>
+                      Meta Description
+                    </label>
+                    <textarea id="metaDescription" value={form.metaDescription} onChange={(e) => updateForm('metaDescription', e.target.value)} placeholder="A short description for search engines..." rows={3} className="w-full px-4 py-3 rounded-xl transition-all resize-none" style={inputStyle} onFocus={(e) => e.target.style.borderColor = '#7A9070'} onBlur={(e) => e.target.style.borderColor = '#E5E7EB'} />
+                  </div>
+                  <div>
+                    <label htmlFor="metaKeywords" className="block text-sm mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>
+                      Meta Keywords
+                    </label>
+                    <input type="text" id="metaKeywords" value={form.metaKeywords} onChange={(e) => updateForm('metaKeywords', e.target.value)} placeholder="glass sipper, cute mug, cozip" className="w-full px-4 py-3 rounded-xl transition-all" style={inputStyle} onFocus={(e) => e.target.style.borderColor = '#7A9070'} onBlur={(e) => e.target.style.borderColor = '#E5E7EB'} />
+                  </div>
+                </div>
               </div>
             </fieldset>
 

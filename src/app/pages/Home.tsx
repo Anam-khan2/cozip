@@ -4,7 +4,8 @@ import { Footer } from '../components/Footer';
 import { Link } from 'react-router';
 import { useProducts } from '../hooks/useProducts';
 import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
-import { showInfoToast, showSuccessToast } from '../lib/notifications';
+import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
+import { addToCart } from '../lib/cart';
 
 export default function Home() {
   const { data: products, error, loading } = useProducts({ featuredOnly: true, limit: 5 });
@@ -13,8 +14,14 @@ export default function Home() {
     showInfoToast('Saved for later', `${productName} was added to your wishlist.`);
   };
 
-  const handleAddToCart = (productName: string) => {
-    showSuccessToast('Added to cart', `${productName} is ready for checkout.`);
+  const handleAddToCart = async (productId: string, productName: string) => {
+    try {
+      await addToCart(productId);
+      showSuccessToast('Added to cart', `${productName} is ready for checkout.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to add item to cart.';
+      showErrorToast('Cart error', message);
+    }
   };
 
   return (
@@ -133,7 +140,7 @@ export default function Home() {
                     </p>
                     <button 
                       type="button"
-                      onClick={() => handleAddToCart(product.name)}
+                      onClick={() => handleAddToCart(product.id, product.name)}
                       className="w-full py-2.5 md:py-3 rounded-full transition-all hover:scale-105 text-sm md:text-base"
                       style={{ 
                         backgroundColor: '#7A9070',

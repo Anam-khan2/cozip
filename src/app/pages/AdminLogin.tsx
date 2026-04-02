@@ -3,15 +3,17 @@ import { useNavigate, Link } from 'react-router';
 import { Lock, Mail } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showInfoToast, showSuccessToast } from '../lib/notifications';
+import { signIn } from '../lib/auth';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate form
@@ -20,12 +22,17 @@ export default function AdminLogin() {
       return;
     }
 
-    // Demo: Check credentials (for demo purposes only)
-    if (email === 'admin@cozip.com' && password === 'admin123') {
+    setIsSubmitting(true);
+
+    try {
+      await signIn(email, password);
       showSuccessToast('Admin login successful.', 'Welcome back to the Cozip dashboard.');
       navigate('/admin');
-    } else {
-      showErrorToast('Invalid credentials.', 'Try admin@cozip.com with password admin123.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to sign in right now.';
+      showErrorToast('Invalid credentials.', message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

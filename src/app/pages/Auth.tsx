@@ -5,7 +5,7 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showInfoToast, showSuccessToast } from '../lib/notifications';
-import { saveAuthSession, useAuthSession } from '../lib/auth';
+import { signIn, signUp, useAuthSession } from '../lib/auth';
 
 // Auth mode type
 type AuthMode = 'login' | 'register';
@@ -16,6 +16,7 @@ export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const authSession = useAuthSession();
 
   // Login form state
@@ -44,39 +45,45 @@ export default function Auth() {
   }, [authSession?.isAuthenticated, navigate]);
 
   // Handle login submission
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock login - in production would authenticate with backend
-    console.log('Login:', loginForm, { rememberMe });
-    const firstName = loginForm.email.split('@')[0]?.split(/[._-]/)[0] ?? 'Cozip';
+    setIsSubmitting(true);
 
-    saveAuthSession({
-      isAuthenticated: true,
-      firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1),
-      email: loginForm.email,
-    });
-    showSuccessToast('Signed in successfully.', 'Your demo account is ready.');
-    navigate('/');
+    try {
+      await signIn(loginForm.email, loginForm.password);
+      showSuccessToast('Signed in successfully.', 'Welcome back!');
+      navigate('/');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to sign in right now.';
+      showErrorToast('Sign in failed.', message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Handle registration submission
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Validate password match
     if (registerForm.password !== registerForm.confirmPassword) {
       showErrorToast('Passwords do not match.', 'Please re-enter the same password in both fields.');
       return;
     }
-    // Mock registration - in production would create account with backend
-    console.log('Register:', registerForm);
-    saveAuthSession({
-      isAuthenticated: true,
-      firstName: registerForm.firstName,
-      lastName: registerForm.lastName,
-      email: registerForm.email,
-    });
-    showSuccessToast('Account created successfully.', 'You are now signed in and ready to shop.');
-    navigate('/');
+    setIsSubmitting(true);
+
+    try {
+      await signUp(registerForm.email, registerForm.password, {
+        firstName: registerForm.firstName,
+        lastName: registerForm.lastName,
+      });
+      showSuccessToast('Account created successfully.', 'You are now signed in and ready to shop.');
+      navigate('/');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to create account right now.';
+      showErrorToast('Registration failed.', message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

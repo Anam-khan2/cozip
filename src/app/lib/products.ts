@@ -25,6 +25,10 @@ type ProductRow = {
   weight: string | null;
   care: string | null;
   shipping_info: string | null;
+  slug: string | null;
+  meta_title: string | null;
+  meta_description: string | null;
+  meta_keywords: string | null;
   reviews: ProductReviewRow[] | string | null;
   created_at: string | null;
 };
@@ -43,6 +47,10 @@ export type ProductMutationInput = {
   weight?: string;
   care?: string;
   shippingInfo?: string;
+  slug?: string;
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
   rating?: number;
 };
 
@@ -79,6 +87,10 @@ export type ProductDetailData = ProductCard & {
   images: string[];
   specifications: Record<string, string>;
   shipping: string;
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
   reviews: ProductReview[];
 };
 
@@ -98,6 +110,10 @@ const PRODUCT_SELECT = `
   weight,
   care,
   shipping_info,
+  slug,
+  meta_title,
+  meta_description,
+  meta_keywords,
   reviews,
   created_at
 `;
@@ -222,6 +238,10 @@ function mapProductRow(product: ProductRow): ProductDetailData {
     images,
     specifications,
     shipping: product.shipping_info?.trim() || DEFAULT_SHIPPING_INFO,
+    slug: product.slug?.trim() || '',
+    metaTitle: product.meta_title?.trim() || '',
+    metaDescription: product.meta_description?.trim() || '',
+    metaKeywords: product.meta_keywords?.trim() || '',
     reviews,
   };
 }
@@ -335,6 +355,10 @@ function buildCreatePayload(input: ProductMutationInput) {
     weight: toNullableText(input.weight),
     care: toNullableText(input.care),
     shipping_info: toNullableText(input.shippingInfo),
+    slug: toNullableText(input.slug),
+    meta_title: toNullableText(input.metaTitle),
+    meta_description: toNullableText(input.metaDescription),
+    meta_keywords: toNullableText(input.metaKeywords),
     rating: input.rating ?? 5,
   };
 }
@@ -378,6 +402,22 @@ function buildUpdatePayload(input: ProductUpdateInput) {
 
   if ('shippingInfo' in input) {
     payload.shipping_info = toNullableText(input.shippingInfo);
+  }
+
+  if ('slug' in input) {
+    payload.slug = toNullableText(input.slug);
+  }
+
+  if ('metaTitle' in input) {
+    payload.meta_title = toNullableText(input.metaTitle);
+  }
+
+  if ('metaDescription' in input) {
+    payload.meta_description = toNullableText(input.metaDescription);
+  }
+
+  if ('metaKeywords' in input) {
+    payload.meta_keywords = toNullableText(input.metaKeywords);
   }
 
   if ('rating' in input) {

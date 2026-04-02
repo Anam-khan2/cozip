@@ -6,7 +6,7 @@ export function StoreToaster() {
       position="top-right"
       closeButton
       toastOptions={{
-        className: 'cozip-toast',
+        className: 'snugsip-toast',
         style: {
           background: '#FFF9FB',
           border: '1px solid #F3D8DE',

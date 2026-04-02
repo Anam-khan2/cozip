@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
+import { Helmet } from 'react-helmet-async';
 import { Heart, Minus, Plus, Star } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useProduct } from '../hooks/useProducts';
-import { showInfoToast, showSuccessToast } from '../lib/notifications';
+import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
+import { addToCart } from '../lib/cart';
 
 function formatReviewDate(date: string) {
   if (!date) {
@@ -73,6 +75,11 @@ export default function ProductDetail() {
     );
   }
 
+  const seoTitle = product.metaTitle || product.name;
+  const seoDescription = product.metaDescription || product.description;
+  const seoKeywords = product.metaKeywords || '';
+  const seoImage = product.images[0] || '';
+
   const handleQuantityDecrease = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
@@ -85,6 +92,19 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#FAF8F3' }}>
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        {seoKeywords && <meta name="keywords" content={seoKeywords} />}
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        {seoImage && <meta property="og:image" content={seoImage} />}
+        <meta property="og:type" content="product" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+        {seoImage && <meta name="twitter:image" content={seoImage} />}
+      </Helmet>
       <Header />
 
       <main className="store-section">
@@ -167,7 +187,15 @@ export default function ProductDetail() {
 
                 <button
                   type="button"
-                  onClick={() => showSuccessToast('Added to cart', `${quantity} × ${product.name} added to your cart.`)}
+                  onClick={async () => {
+                    try {
+                      await addToCart(product.id, quantity);
+                      showSuccessToast('Added to cart', `${quantity} × ${product.name} added to your cart.`);
+                    } catch (error) {
+                      const message = error instanceof Error ? error.message : 'Unable to add item to cart.';
+                      showErrorToast('Cart error', message);
+                    }
+                  }}
                   className="w-full rounded-full py-5 text-lg transition-all hover:scale-105"
                   style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 8px 32px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
                   aria-label={`Add ${quantity} ${product.name} to cart`}
