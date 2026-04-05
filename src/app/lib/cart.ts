@@ -56,8 +56,7 @@ export async function fetchCartItems(): Promise<CartItem[]> {
   const { data, error } = await supabase
     .from('cart_items')
     .select('id, product_id, quantity')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true });
+    .eq('user_id', userId);
 
   if (error) throw error;
 
