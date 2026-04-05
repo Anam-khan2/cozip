@@ -17,12 +17,13 @@ interface CartRow {
   id: string;
   product_id: string;
   quantity: number;
-  products: {
-    id: string;
-    name: string;
-    price: number | string;
-    images: string[] | null;
-  };
+}
+
+interface ProductLookupRow {
+  id: string;
+  name: string;
+  price: number | string;
+  images: string[] | null;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -33,29 +34,17 @@ async function getCurrentUserId(): Promise<string | null> {
   return data.session?.user?.id ?? null;
 }
 
-function mapRow(row: CartRow): CartItem {
-  const images = row.products.images ?? [];
+function mapRow(row: CartRow, product: ProductLookupRow | undefined): CartItem {
+  const images = product?.images ?? [];
   return {
     id: row.id,
-    productId: row.products.id,
-    name: row.products.name,
-    price: Number(row.products.price),
+    productId: row.product_id,
+    name: product?.name ?? 'Product unavailable',
+    price: Number(product?.price ?? 0),
     quantity: row.quantity,
     image: images[0] ?? '',
   };
 }
-
-const CART_SELECT = `
-  id,
-  product_id,
-  quantity,
-  products (
-    id,
-    name,
-    price,
-    images
-  )
-`;
 
 // ─── CRUD ───────────────────────────────────────────────────────────────
 
@@ -66,12 +55,31 @@ export async function fetchCartItems(): Promise<CartItem[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('cart_items')
-    .select(CART_SELECT)
+    .select('id, product_id, quantity')
     .eq('user_id', userId)
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return (data as unknown as CartRow[]).map(mapRow);
+
+  const cartRows = (data as CartRow[]) ?? [];
+
+  if (cartRows.length === 0) {
+    return [];
+  }
+
+  const productIds = Array.from(new Set(cartRows.map((row) => row.product_id)));
+  const { data: productData, error: productError } = await supabase
+    .from('products')
+    .select('id, name, price, images')
+    .in('id', productIds);
+
+  if (productError) throw productError;
+
+  const productsById = new Map(
+    ((productData as ProductLookupRow[] | null) ?? []).map((product) => [product.id, product])
+  );
+
+  return cartRows.map((row) => mapRow(row, productsById.get(row.product_id)));
 }
 
 export async function addToCart(productId: string, quantity = 1): Promise<void> {

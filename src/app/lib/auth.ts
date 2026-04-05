@@ -8,6 +8,8 @@ export interface AuthSession {
   email: string;
 }
 
+export type AuthSessionState = AuthSession | null | undefined;
+
 function userToAuthSession(user: { email?: string; user_metadata?: Record<string, unknown> } | null): AuthSession | null {
   if (!user || !user.email) {
     return null;
@@ -111,7 +113,7 @@ export function clearAuthSession() {
 }
 
 export function useAuthSession() {
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [session, setSession] = useState<AuthSessionState>(undefined);
 
   useEffect(() => {
     const supabase = getSupabaseClient();

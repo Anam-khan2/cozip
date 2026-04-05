@@ -72,10 +72,10 @@ export default function Dashboard() {
   const authSession = useAuthSession();
 
   useEffect(() => {
-    if (!authSession?.isAuthenticated) {
+    if (authSession === null) {
       navigate('/login');
     }
-  }, [authSession?.isAuthenticated, navigate]);
+  }, [authSession, navigate]);
 
   // Get status badge color
   const getStatusColor = (status: Order['status']) => {
@@ -99,6 +99,16 @@ export default function Dashboard() {
     showSuccessToast('Signed out successfully.', 'See you next time.');
     navigate('/');
   };
+
+  if (authSession === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
+        <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
+          Loading your dashboard…
+        </p>
+      </div>
+    );
+  }
 
   if (!authSession?.isAuthenticated) {
     return null;

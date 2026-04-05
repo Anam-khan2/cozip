@@ -12,7 +12,11 @@ export function Header() {
   const location = useLocation();
   const wishlistCount = 4;
   const authSession = useAuthSession();
-  const accountDestination = authSession?.isAuthenticated ? '/dashboard' : '/login';
+  const accountDestination = authSession === undefined
+    ? '/login'
+    : authSession?.isAuthenticated
+      ? '/dashboard'
+      : '/login';
   const trackOrderDestination = '/track-order';
 
   useEffect(() => {
