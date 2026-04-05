@@ -16,6 +16,7 @@ import Wishlist from './pages/Wishlist';
 import Contact from './pages/Contact';
 import FAQ from './pages/FAQ';
 import About from './pages/About';
+import AuthCallback from './pages/AuthCallback';
 import Legal from './pages/Legal';
 import TrackOrder from './pages/TrackOrder';
 import OrderTrackingDetails from './pages/OrderTrackingDetails';
@@ -48,6 +49,10 @@ export const router = createBrowserRouter([
   {
     path: '/register',
     element: <Auth />,
+  },
+  {
+    path: '/auth/callback',
+    element: <AuthCallback />,
   },
   {
     path: '/dashboard',

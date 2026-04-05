@@ -24,6 +24,14 @@ function userToAuthSession(user: { email?: string; user_metadata?: Record<string
   };
 }
 
+function getEmailRedirectUrl() {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/auth/callback`;
+  }
+
+  return 'https://cozip.vercel.app/auth/callback';
+}
+
 export async function signIn(email: string, password: string) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -41,6 +49,7 @@ export async function signUp(email: string, password: string, metadata?: { first
     email,
     password,
     options: {
+      emailRedirectTo: getEmailRedirectUrl(),
       data: {
         first_name: metadata?.firstName ?? '',
         last_name: metadata?.lastName ?? '',
