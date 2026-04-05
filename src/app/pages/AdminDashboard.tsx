@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight, MapPin } from 'lucide-react';
+import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
-import { BrandLogo } from '../components/BrandLogo';
+import cozipLogo from '../../../assets/cozip-web-logo.png';
 import { showInfoToast } from '../lib/notifications';
 import { PageSeo } from '../components/PageSeo';
 import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
@@ -457,7 +457,7 @@ export default function AdminDashboard() {
         {/* Admin Logo & Header */}
         <header className="p-6 border-b" style={{ borderColor: '#E5E7EB' }}>
           <Link to="/" className="block">
-            <BrandLogo className="mb-3 inline-block" imageClassName="h-16 w-auto" />
+            <img src={cozipLogo} alt="Cozip" className="mb-3 inline-block h-16 w-auto" />
             <p 
               className="text-xs"
               style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontWeight: 500 }}
