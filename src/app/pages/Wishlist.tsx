@@ -1,53 +1,23 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
-import { Heart, ShoppingCart, X } from 'lucide-react';
+import { Heart, ShoppingCart, X, Loader2 } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { EmptyState } from '../components/EmptyState';
 import { showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
-
-interface WishlistItem {
-  id: number;
-  name: string;
-  price: number;
-  image: string;
-}
+import { useWishlist, removeFromWishlist } from '../lib/wishlist';
+import { addToCart } from '../lib/cart';
 
 export default function Wishlist() {
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([
-    {
-      id: 1,
-      name: 'Handmade Aesthetic Pastel Cloud Mug - Limited 2026 Edition',
-      price: 24.99,
-      image: 'https://images.unsplash.com/photo-1674317872332-ca9c2cd00953?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZXN0aGV0aWMlMjBjZXJhbWljJTIwbXVnJTIwY29mZmVlfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=400',
-    },
-    {
-      id: 2,
-      name: 'Pink Pastel Mug',
-      price: 22.99,
-      image: 'https://images.unsplash.com/photo-1588165231518-b4b22bfa0ddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaW5rJTIwYWVzdGhldGljJTIwY29mZmVlJTIwbXVnfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=400',
-    },
-    {
-      id: 3,
-      name: 'Sage Green Mug',
-      price: 23.99,
-      image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzYWdlJTIwZ3JlZW4lMjBtdWd8ZW58MXx8fHwxNzMyNDM3MDAwfDA&ixlib=rb-4.1.0&q=80&w=400',
-    },
-    {
-      id: 4,
-      name: 'Minimalist White Mug',
-      price: 21.99,
-      image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwd2hpdGUlMjBtdWd8ZW58MXx8fHwxNzMyNDM3MDAwfDA&ixlib=rb-4.1.0&q=80&w=400',
-    },
-  ]);
+  const { items: wishlistItems, loading } = useWishlist();
 
-  const handleRemoveItem = (itemId: number) => {
-    setWishlistItems((items) => items.filter((item) => item.id !== itemId));
+  const handleRemoveItem = (itemId: string) => {
+    void removeFromWishlist(itemId);
   };
 
-  const handleAddToCart = (item: WishlistItem) => {
+  const handleAddToCart = (item: { productId: string; name: string }) => {
+    void addToCart(item.productId);
     showSuccessToast('Added to cart', `${item.name} moved from your wishlist to cart.`);
   };
 
@@ -71,7 +41,11 @@ export default function Wishlist() {
             </p>
           </header>
 
-          {wishlistItems.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#7A9070' }} />
+            </div>
+          ) : wishlistItems.length > 0 ? (
             <section className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4" aria-label="Wishlist items">
               {wishlistItems.map((item) => (
                 <article key={item.id} className="relative rounded-2xl border p-6 transition-all hover:shadow-lg" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
@@ -79,11 +53,11 @@ export default function Wishlist() {
                     <X className="h-4 w-4" aria-hidden="true" />
                   </button>
 
-                  <Link to={`/product/${item.id}`} className="mb-4 block" aria-label={`View ${item.name}`}>
+                  <Link to={`/product/${item.productId}`} className="mb-4 block" aria-label={`View ${item.name}`}>
                     <img src={item.image} alt={item.name} className="w-full rounded-xl" style={{ aspectRatio: '1 / 1', objectFit: 'cover', border: '2px solid #F0F4F0' }} />
                   </Link>
 
-                  <Link to={`/product/${item.id}`}>
+                  <Link to={`/product/${item.productId}`}>
                     <h2 className="product-title-wrap mb-2 text-lg transition-all hover:opacity-70" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>
                       {item.name}
                     </h2>

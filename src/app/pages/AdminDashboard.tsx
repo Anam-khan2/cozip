@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight, MapPin } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
@@ -7,25 +7,8 @@ import { deleteProductById, deleteProductImages, getProductById, updateProduct, 
 import { BrandLogo } from '../components/BrandLogo';
 import { showInfoToast } from '../lib/notifications';
 import { PageSeo } from '../components/PageSeo';
-
-// Order type
-interface Order {
-  id: string;
-  customer: string;
-  date: string;
-  total: number;
-  status: 'Processing' | 'Shipped' | 'Delivered';
-}
-
-// Coupon type
-interface Coupon {
-  id: number;
-  code: string;
-  discount: string;
-  usageLimit: number;
-  usedCount: number;
-  status: 'Active' | 'Expired';
-}
+import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
+import { fetchCoupons, createCoupon, deleteCoupon, type Coupon } from '../lib/coupons';
 
 // Email Template type
 interface EmailTemplate {
@@ -39,13 +22,10 @@ interface Customer {
   id: string;
   name: string;
   email: string;
-  city: string;
-  joinedAt: string;
-  lastOrderAt: string;
   totalSpent: number;
-  orders: number;
-  segment: 'VIP' | 'Repeat' | 'New';
-  status: 'Active' | 'At Risk';
+  orderCount: number;
+  role: string;
+  createdAt: string;
 }
 
 interface EditProductFormState {
@@ -83,97 +63,6 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
   return nextItems;
 }
 
-const customerRecords: Customer[] = [
-  {
-    id: 'CUS-001',
-    name: 'Sarah Martinez',
-    email: 'sarah.martinez@example.com',
-    city: 'Lahore',
-    joinedAt: '2025-11-03',
-    lastOrderAt: '2026-03-06',
-    totalSpent: 28450,
-    orders: 8,
-    segment: 'VIP',
-    status: 'Active',
-  },
-  {
-    id: 'CUS-002',
-    name: 'Emma Chen',
-    email: 'emma.chen@example.com',
-    city: 'Karachi',
-    joinedAt: '2025-12-11',
-    lastOrderAt: '2026-03-06',
-    totalSpent: 19600,
-    orders: 6,
-    segment: 'Repeat',
-    status: 'Active',
-  },
-  {
-    id: 'CUS-003',
-    name: 'Jessica Taylor',
-    email: 'jessica.taylor@example.com',
-    city: 'Islamabad',
-    joinedAt: '2026-01-07',
-    lastOrderAt: '2026-03-05',
-    totalSpent: 8200,
-    orders: 3,
-    segment: 'Repeat',
-    status: 'Active',
-  },
-  {
-    id: 'CUS-004',
-    name: 'Michael Brown',
-    email: 'michael.brown@example.com',
-    city: 'Faisalabad',
-    joinedAt: '2025-10-22',
-    lastOrderAt: '2026-02-21',
-    totalSpent: 15400,
-    orders: 4,
-    segment: 'Repeat',
-    status: 'At Risk',
-  },
-  {
-    id: 'CUS-005',
-    name: 'Olivia Davis',
-    email: 'olivia.davis@example.com',
-    city: 'Multan',
-    joinedAt: '2026-02-18',
-    lastOrderAt: '2026-03-04',
-    totalSpent: 4900,
-    orders: 2,
-    segment: 'New',
-    status: 'Active',
-  },
-  {
-    id: 'CUS-006',
-    name: 'Sophia Anderson',
-    email: 'sophia.anderson@example.com',
-    city: 'Rawalpindi',
-    joinedAt: '2025-09-14',
-    lastOrderAt: '2026-01-29',
-    totalSpent: 12400,
-    orders: 5,
-    segment: 'VIP',
-    status: 'At Risk',
-  },
-];
-
-const salesTrendData = [
-  { month: 'Oct', sales: 78000, orders: 42, customers: 18 },
-  { month: 'Nov', sales: 92000, orders: 50, customers: 22 },
-  { month: 'Dec', sales: 118000, orders: 63, customers: 28 },
-  { month: 'Jan', sales: 105000, orders: 58, customers: 25 },
-  { month: 'Feb', sales: 134000, orders: 71, customers: 31 },
-  { month: 'Mar', sales: 149000, orders: 77, customers: 36 },
-];
-
-const categoryPerformanceData = [
-  { category: 'Glassware', revenue: 92000 },
-  { category: 'Ceramics', revenue: 74000 },
-  { category: 'Gift Sets', revenue: 53000 },
-  { category: 'Accessories', revenue: 28000 },
-];
-
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons' | 'analytics' | 'emails'>('orders');
   const [emailTab, setEmailTab] = useState<'campaigns' | 'templates'>('templates');
@@ -185,102 +74,64 @@ export default function AdminDashboard() {
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [productActionError, setProductActionError] = useState<string | null>(null);
   const [productActionMessage, setProductActionMessage] = useState<string | null>(null);
-  
-  // Sample orders data
-  const [orders, setOrders] = useState<Order[]>([
-    { id: 'CZP-10892', customer: 'Sarah Martinez', date: '2026-03-06', total: 72.97, status: 'Processing' },
-    { id: 'CZP-10891', customer: 'Emma Chen', date: '2026-03-06', total: 47.98, status: 'Processing' },
-    { id: 'CZP-10890', customer: 'Jessica Taylor', date: '2026-03-05', total: 24.99, status: 'Shipped' },
-    { id: 'CZP-10889', customer: 'Michael Brown', date: '2026-03-05', total: 95.96, status: 'Shipped' },
-    { id: 'CZP-10888', customer: 'Olivia Davis', date: '2026-03-04', total: 22.99, status: 'Delivered' },
-    { id: 'CZP-10887', customer: 'James Wilson', date: '2026-03-04', total: 134.95, status: 'Delivered' },
-    { id: 'CZP-10886', customer: 'Sophia Anderson', date: '2026-03-03', total: 49.98, status: 'Delivered' },
-    { id: 'CZP-10885', customer: 'Liam Martinez', date: '2026-03-03', total: 24.99, status: 'Delivered' },
-  ]);
 
-  // Sample coupons data
-  const [coupons, setCoupons] = useState<Coupon[]>([
-    { 
-      id: 1, 
-      code: 'SAVE10', 
-      discount: '10%', 
-      usageLimit: 100, 
-      usedCount: 20, 
-      status: 'Active' 
-    },
-    { 
-      id: 2, 
-      code: 'DISCOUNT20', 
-      discount: '20%', 
-      usageLimit: 50, 
-      usedCount: 30, 
-      status: 'Active' 
-    },
-    { 
-      id: 3, 
-      code: 'OFF30', 
-      discount: '30%', 
-      usageLimit: 20, 
-      usedCount: 15, 
-      status: 'Active' 
-    },
-    { 
-      id: 4, 
-      code: 'FREE5', 
-      discount: '5$', 
-      usageLimit: 100, 
-      usedCount: 50, 
-      status: 'Active' 
-    },
-    { 
-      id: 5, 
-      code: 'EXPIRED', 
-      discount: '15%', 
-      usageLimit: 50, 
-      usedCount: 50, 
-      status: 'Expired' 
-    },
-  ]);
+  // Real data state
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [customerRecords, setCustomerRecords] = useState<Customer[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  // Sample email templates data
+  // Sample email templates data (kept as static config — not user-generated content)
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([
-    { 
-      id: 1, 
-      name: 'Welcome Email', 
-      subject: 'Welcome to Cozip!', 
-      status: 'Active' 
-    },
-    { 
-      id: 2, 
-      name: 'Order Confirmation', 
-      subject: 'Your Order has been Confirmed', 
-      status: 'Active' 
-    },
-    { 
-      id: 3, 
-      name: 'Password Reset', 
-      subject: 'Reset Your Password', 
-      status: 'Active' 
-    },
-    { 
-      id: 4, 
-      name: 'Newsletter', 
-      subject: 'Monthly Newsletter', 
-      status: 'Inactive' 
-    },
-    { 
-      id: 5, 
-      name: 'Promotion Alert', 
-      subject: 'Exclusive Promotion Alert', 
-      status: 'Active' 
-    },
+    { id: 1, name: 'Welcome Email', subject: 'Welcome to Cozip!', status: 'Active' },
+    { id: 2, name: 'Order Confirmation', subject: 'Your Order has been Confirmed', status: 'Active' },
+    { id: 3, name: 'Password Reset', subject: 'Reset Your Password', status: 'Active' },
+    { id: 4, name: 'Newsletter', subject: 'Monthly Newsletter', status: 'Inactive' },
+    { id: 5, name: 'Promotion Alert', subject: 'Exclusive Promotion Alert', status: 'Active' },
   ]);
+
+  // Fetch real data on mount
+  useEffect(() => {
+    async function loadAdminData() {
+      try {
+        const [fetchedOrders, fetchedCustomers, fetchedCoupons] = await Promise.all([
+          fetchAllOrders(),
+          fetchAllCustomers(),
+          fetchCoupons(),
+        ]);
+        setOrders(fetchedOrders);
+        setCustomerRecords(fetchedCustomers.map((c) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          totalSpent: c.totalSpent,
+          orderCount: c.orderCount,
+          role: c.role,
+          createdAt: c.createdAt,
+        })));
+        setCoupons(fetchedCoupons);
+      } catch {
+        // Silently handle — tables may not exist yet
+      } finally {
+        setDataLoading(false);
+      }
+    }
+    void loadAdminData();
+  }, []);
 
   // Handle status change
-  const handleStatusChange = (orderId: string, newStatus: 'Processing' | 'Shipped' | 'Delivered') => {
-    setOrders(orders.map(order => 
-      order.id === orderId ? { ...order, status: newStatus } : order
-    ));
+  const handleStatusChange = async (orderId: string, newStatus: 'Processing' | 'Shipped' | 'Delivered') => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+    } catch {
+      // Optimistic local update even if DB fails
+      setOrders(orders.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+    }
   };
 
   // Handle product actions
@@ -484,23 +335,55 @@ export default function AdminDashboard() {
 
   const formatCurrency = (amount: number) => `PKR ${new Intl.NumberFormat('en-PK').format(amount)}`;
 
-  // Calculate metrics
+  // Calculate metrics from real data
   const totalSales = orders.reduce((sum, order) => sum + order.total, 0);
-  const pendingOrders = orders.filter(order => order.status === 'Processing').length;
+  const pendingOrders = orders.filter(order => order.status === 'Processing' || order.status === 'Packed').length;
   const totalOrders = orders.length;
-  const totalCustomers = new Set(orders.map(order => order.customer)).size;
-  const activeCustomers = customerRecords.filter((customer) => customer.status === 'Active').length;
-  const vipCustomers = customerRecords.filter((customer) => customer.segment === 'VIP').length;
-  const atRiskCustomers = customerRecords.filter((customer) => customer.status === 'At Risk').length;
+  const totalCustomers = customerRecords.length;
+  const featuredProductsCount = products.filter((product) => product.isFeatured).length;
+
+  // Derive sales trend from real orders (group by month)
+  const salesTrendData = (() => {
+    const monthMap = new Map<string, { sales: number; orders: number; customers: Set<string> }>();
+    for (const order of orders) {
+      const date = new Date(order.date);
+      const key = date.toLocaleDateString('en-US', { month: 'short' });
+      const existing = monthMap.get(key) ?? { sales: 0, orders: 0, customers: new Set<string>() };
+      existing.sales += order.total;
+      existing.orders += 1;
+      existing.customers.add(order.customer);
+      monthMap.set(key, existing);
+    }
+    return Array.from(monthMap.entries()).map(([month, data]) => ({
+      month,
+      sales: Math.round(data.sales),
+      orders: data.orders,
+      customers: data.customers.size,
+    }));
+  })();
+
+  // Derive category performance from real products
+  const categoryPerformanceData = (() => {
+    const catMap = new Map<string, number>();
+    for (const product of products) {
+      const cat = product.category || 'Other';
+      catMap.set(cat, (catMap.get(cat) ?? 0) + product.price * (product.stock ?? 0));
+    }
+    return Array.from(catMap.entries()).map(([category, revenue]) => ({
+      category,
+      revenue: Math.round(revenue),
+    })).sort((a, b) => b.revenue - a.revenue);
+  })();
+
   const monthlyRevenue = salesTrendData[salesTrendData.length - 1]?.sales ?? 0;
   const previousMonthRevenue = salesTrendData[salesTrendData.length - 2]?.sales ?? 0;
   const revenueGrowth = previousMonthRevenue > 0 ? ((monthlyRevenue - previousMonthRevenue) / previousMonthRevenue) * 100 : 0;
-  const featuredProductsCount = products.filter((product) => product.isFeatured).length;
+
   const recentActivities = [
-    `New VIP customer Sarah Martinez crossed ${formatCurrency(25000)} in lifetime spend.`,
+    `${totalCustomers} registered customers on the platform.`,
     `${pendingOrders} orders are waiting for fulfillment review today.`,
     `${featuredProductsCount} products are currently highlighted on the storefront.`,
-    `March sales are up ${revenueGrowth.toFixed(1)}% compared to February.`,
+    salesTrendData.length >= 2 ? `Latest month sales are ${revenueGrowth >= 0 ? 'up' : 'down'} ${Math.abs(revenueGrowth).toFixed(1)}% compared to previous month.` : `${totalOrders} total orders placed.`,
   ];
   const topCustomers = [...customerRecords]
     .sort((firstCustomer, secondCustomer) => secondCustomer.totalSpent - firstCustomer.totalSpent)
@@ -513,24 +396,8 @@ export default function AdminDashboard() {
       year: 'numeric',
     });
 
-  const getCustomerStatusStyles = (status: Customer['status']) => {
-    if (status === 'Active') {
-      return {
-        backgroundColor: '#DCFCE7',
-        border: '1px solid #86EFAC',
-        color: '#166534',
-      };
-    }
-
-    return {
-      backgroundColor: '#FEF3C7',
-      border: '1px solid #FCD34D',
-      color: '#B45309',
-    };
-  };
-
-  const getSegmentStyles = (segment: Customer['segment']) => {
-    if (segment === 'VIP') {
+  const getCustomerRoleStyles = (role: string) => {
+    if (role === 'admin') {
       return {
         backgroundColor: '#FCE7F3',
         border: '1px solid #F9A8D4',
@@ -538,18 +405,10 @@ export default function AdminDashboard() {
       };
     }
 
-    if (segment === 'Repeat') {
-      return {
-        backgroundColor: '#DBEAFE',
-        border: '1px solid #93C5FD',
-        color: '#1D4ED8',
-      };
-    }
-
     return {
-      backgroundColor: '#EDE9FE',
-      border: '1px solid #C4B5FD',
-      color: '#6D28D9',
+      backgroundColor: '#DCFCE7',
+      border: '1px solid #86EFAC',
+      color: '#166534',
     };
   };
 
@@ -1625,7 +1484,7 @@ export default function AdminDashboard() {
                             className="text-sm"
                             style={{ color: '#4A5D45', fontWeight: 600 }}
                           >
-                            {coupon.discount}
+                            {coupon.discountType === 'percent' ? `${coupon.discountValue}%` : `$${coupon.discountValue}`}
                           </span>
                         </td>
 
@@ -2387,24 +2246,24 @@ export default function AdminDashboard() {
                 },
                 {
                   label: 'Active Customers',
-                  value: activeCustomers.toString(),
-                  note: `${vipCustomers} VIP clients`,
+                  value: totalCustomers.toString(),
+                  note: `${totalCustomers} registered users`,
                   icon: UserCheck,
                   accent: '#2563EB',
                   background: '#EFF6FF',
                 },
                 {
                   label: 'New This Month',
-                  value: salesTrendData[salesTrendData.length - 1].customers.toString(),
-                  note: 'Strong acquisition pace',
+                  value: (salesTrendData[salesTrendData.length - 1]?.customers ?? 0).toString(),
+                  note: 'Unique ordering customers',
                   icon: UserPlus,
                   accent: '#D97706',
                   background: '#FFF7ED',
                 },
                 {
-                  label: 'At Risk Accounts',
-                  value: atRiskCustomers.toString(),
-                  note: 'Needs retention outreach',
+                  label: 'Pending Orders',
+                  value: pendingOrders.toString(),
+                  note: 'Needs fulfillment',
                   icon: Clock3,
                   accent: '#DC2626',
                   background: '#FEF2F2',
@@ -2487,12 +2346,11 @@ export default function AdminDashboard() {
 
         {activeView === 'customers' && (
           <div className="p-8 space-y-8">
-            <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6" aria-label="Customer metrics">
+            <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6" aria-label="Customer metrics">
               {[
-                { label: 'Customer Base', value: customerRecords.length.toString(), note: 'Tracked active profiles', color: '#4A5D45' },
-                { label: 'VIP Segment', value: vipCustomers.toString(), note: 'High-lifetime value buyers', color: '#9D174D' },
-                { label: 'At Risk', value: atRiskCustomers.toString(), note: 'No recent orders detected', color: '#B45309' },
-                { label: 'Avg Lifetime Value', value: formatCurrency(Math.round(customerRecords.reduce((sum, customer) => sum + customer.totalSpent, 0) / customerRecords.length)), note: 'Across current dummy clients', color: '#166534' },
+                { label: 'Customer Base', value: customerRecords.length.toString(), note: 'Registered profiles', color: '#4A5D45' },
+                { label: 'Total Revenue', value: formatCurrency(Math.round(customerRecords.reduce((sum, customer) => sum + customer.totalSpent, 0))), note: 'From all customer orders', color: '#166534' },
+                { label: 'Avg Lifetime Value', value: customerRecords.length > 0 ? formatCurrency(Math.round(customerRecords.reduce((sum, customer) => sum + customer.totalSpent, 0) / customerRecords.length)) : formatCurrency(0), note: 'Across all customers', color: '#1D4ED8' },
               ].map((metric) => (
                 <article key={metric.label} className="rounded-2xl border p-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                   <h3 className="text-sm mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontWeight: 500 }}>{metric.label}</h3>
@@ -2506,21 +2364,22 @@ export default function AdminDashboard() {
               <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                 <div className="border-b px-6 py-5" style={{ borderColor: '#F3F4F6' }}>
                   <h3 className="text-xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Customer Directory</h3>
-                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.875rem' }}>Dummy customer records for UI planning and data layout.</p>
+                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.875rem' }}>All registered user profiles from the database.</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid #E5E7EB' }}>
                         <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Customer</th>
-                        <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Location</th>
                         <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Orders</th>
                         <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Spent</th>
-                        <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Segment</th>
-                        <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Status</th>
+                        <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Role</th>
                       </tr>
                     </thead>
                     <tbody>
+                      {customerRecords.length === 0 && (
+                        <tr><td colSpan={4} className="px-6 py-12 text-center" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{dataLoading ? 'Loading customers…' : 'No customers yet.'}</td></tr>
+                      )}
                       {customerRecords.map((customer, index) => (
                         <tr key={customer.id} style={{ borderBottom: index !== customerRecords.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
                           <td className="px-6 py-4">
@@ -2529,22 +2388,11 @@ export default function AdminDashboard() {
                               <p className="text-sm" style={{ color: '#7A9070' }}>{customer.email}</p>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-sm" style={{ color: '#7A9070' }}>
-                              <MapPin className="h-4 w-4" aria-hidden="true" />
-                              {customer.city}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4" style={{ color: '#4A5D45', fontWeight: 600 }}>{customer.orders}</td>
+                          <td className="px-6 py-4" style={{ color: '#4A5D45', fontWeight: 600 }}>{customer.orderCount}</td>
                           <td className="px-6 py-4" style={{ color: '#4A5D45', fontWeight: 600 }}>{formatCurrency(customer.totalSpent)}</td>
                           <td className="px-6 py-4">
-                            <span className="rounded-full px-3 py-1 text-sm" style={{ ...getSegmentStyles(customer.segment), fontWeight: 600 }}>
-                              {customer.segment}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="rounded-full px-3 py-1 text-sm" style={{ ...getCustomerStatusStyles(customer.status), fontWeight: 600 }}>
-                              {customer.status}
+                            <span className="rounded-full px-3 py-1 text-sm" style={{ ...getCustomerRoleStyles(customer.role), fontWeight: 600 }}>
+                              {customer.role}
                             </span>
                           </td>
                         </tr>
@@ -2556,29 +2404,35 @@ export default function AdminDashboard() {
 
               <div className="space-y-6">
                 <div className="rounded-2xl border p-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
-                  <h3 className="text-xl mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Retention Focus</h3>
-                  <div className="space-y-4">
-                    {customerRecords.filter((customer) => customer.status === 'At Risk').map((customer) => (
-                      <div key={customer.id} className="rounded-2xl px-4 py-4" style={{ backgroundColor: '#FFF7ED' }}>
+                  <h3 className="text-xl mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Top Customers</h3>
+                  <div className="space-y-3">
+                    {topCustomers.map((customer) => (
+                      <div key={customer.id} className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#F9FAFB' }}>
                         <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{customer.name}</p>
-                        <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#B45309' }}>Last order on {formatShortDate(customer.lastOrderAt)}</p>
+                        <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{formatCurrency(customer.totalSpent)} — {customer.orderCount} orders</p>
                       </div>
                     ))}
+                    {topCustomers.length === 0 && (
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>No customer data yet.</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="rounded-2xl border p-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
-                  <h3 className="text-xl mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>New Signups</h3>
+                  <h3 className="text-xl mb-4" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Recent Signups</h3>
                   <div className="space-y-3">
                     {[...customerRecords]
-                      .sort((firstCustomer, secondCustomer) => new Date(secondCustomer.joinedAt).getTime() - new Date(firstCustomer.joinedAt).getTime())
+                      .sort((firstCustomer, secondCustomer) => new Date(secondCustomer.createdAt).getTime() - new Date(firstCustomer.createdAt).getTime())
                       .slice(0, 3)
                       .map((customer) => (
                         <div key={customer.id} className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#F9FAFB' }}>
                           <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{customer.name}</p>
-                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Joined {formatShortDate(customer.joinedAt)}</p>
+                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Joined {formatShortDate(customer.createdAt)}</p>
                         </div>
                       ))}
+                    {customerRecords.length === 0 && (
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>No signups yet.</p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight } from 'lucide-react';
-import { Header } from '../components/Header';
-import { Footer } from '../components/Footer';
+import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Loader2 } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
-import { showInfoToast, showSuccessToast } from '../lib/notifications';
+import { showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { signOut, useAuthSession } from '../lib/auth';
 import { PageSeo } from '../components/PageSeo';
+import { getUserOrdersFromSupabase, type TrackedOrder } from '../lib/orderTracking';
+import { useWishlist, removeFromWishlist } from '../lib/wishlist';
+import { addToCart } from '../lib/cart';
 
 // Dashboard view type
 type DashboardView = 'overview' | 'orders' | 'wishlist' | 'settings';
 
-// Order type
+// Order type mapped from tracked orders
 interface Order {
   id: string;
   orderNumber: string;
@@ -22,54 +23,47 @@ interface Order {
   items: number;
 }
 
-// Mock order data
-const mockOrders: Order[] = [
-  {
-    id: '1',
-    orderNumber: '#CZP-10847',
-    date: 'March 3, 2026',
-    status: 'Delivered',
-    total: 74.97,
-    items: 3,
-  },
-  {
-    id: '2',
-    orderNumber: '#CZP-10823',
-    date: 'February 28, 2026',
-    status: 'Shipped',
-    total: 49.98,
-    items: 2,
-  },
-  {
-    id: '3',
-    orderNumber: '#CZP-10801',
-    date: 'February 15, 2026',
-    status: 'Processing',
-    total: 24.99,
-    items: 1,
-  },
-  {
-    id: '4',
-    orderNumber: '#CZP-10776',
-    date: 'February 1, 2026',
-    status: 'Delivered',
-    total: 99.96,
-    items: 4,
-  },
-  {
-    id: '5',
-    orderNumber: '#CZP-10745',
-    date: 'January 22, 2026',
-    status: 'Cancelled',
-    total: 22.99,
-    items: 1,
-  },
-];
+function mapTrackedToOrder(tracked: TrackedOrder): Order {
+  const statusMap: Record<string, Order['status']> = {
+    'Confirmed': 'Processing',
+    'Packed': 'Processing',
+    'In Transit': 'Shipped',
+    'Out for Delivery': 'Shipped',
+    'Delivered': 'Delivered',
+  };
+  return {
+    id: tracked.orderNumber,
+    orderNumber: `#${tracked.orderNumber}`,
+    date: tracked.orderPlacedAt || tracked.estimatedDelivery || '',
+    status: statusMap[tracked.status] ?? 'Processing',
+    total: tracked.total,
+    items: tracked.items?.length ?? 0,
+  };
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<DashboardView>('orders');
   const authSession = useAuthSession();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const { items: wishlistItems, loading: wishlistLoading } = useWishlist();
+
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        const tracked = await getUserOrdersFromSupabase();
+        setOrders(tracked.map(mapTrackedToOrder));
+      } catch {
+        setOrders([]);
+      } finally {
+        setOrdersLoading(false);
+      }
+    }
+    if (authSession?.isAuthenticated) {
+      void loadOrders();
+    }
+  }, [authSession]);
 
   useEffect(() => {
     if (authSession === null) {
@@ -356,7 +350,9 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {mockOrders.map((order, index) => {
+                    {ordersLoading ? (
+                      <tr><td colSpan={5} className="px-8 py-12 text-center" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Loading orders…</td></tr>
+                    ) : orders.map((order, index) => {
                       const statusColors = getStatusColor(order.status);
                       return (
                         <tr 
@@ -422,8 +418,8 @@ export default function Dashboard() {
 
                           {/* View Details Button */}
                           <td className="px-8 py-6">
-                            <button
-                              onClick={() => showInfoToast(`Order ${order.orderNumber}`, 'Detailed order tracking is coming soon.')}
+                            <Link
+                              to={`/track-order/${order.id}`}
                               className="flex items-center gap-2 px-4 py-2 rounded-full transition-all hover:scale-105"
                               style={{
                                 backgroundColor: '#7A9070',
@@ -436,7 +432,7 @@ export default function Dashboard() {
                             >
                               <span>View Details</span>
                               <ChevronRight className="w-4 h-4" aria-hidden="true" />
-                            </button>
+                            </Link>
                           </td>
                         </tr>
                       );
@@ -445,7 +441,7 @@ export default function Dashboard() {
                 </table>
 
                 {/* Empty State (if no orders) */}
-                {mockOrders.length === 0 && (
+                {!ordersLoading && orders.length === 0 && (
                   <div className="px-8 py-16 text-center">
                     <Package 
                       className="w-16 h-16 mx-auto mb-4"
@@ -502,7 +498,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    {mockOrders.length}
+                    {orders.length}
                   </p>
                 </article>
 
@@ -524,7 +520,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    ${mockOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                    ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
                   </p>
                 </article>
 
@@ -546,7 +542,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    {mockOrders.filter(o => o.status === 'Processing' || o.status === 'Shipped').length}
+                    {orders.filter(o => o.status === 'Processing' || o.status === 'Shipped').length}
                   </p>
                 </article>
               </div>
@@ -568,7 +564,7 @@ export default function Dashboard() {
                   className="text-lg"
                   style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}
                 >
-                  Welcome back, Jane!
+                  Welcome back, {authSession.firstName}!
                 </p>
               </header>
 
@@ -595,7 +591,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    {mockOrders.length}
+                    {orders.length}
                   </p>
                 </article>
 
@@ -620,7 +616,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    12
+                    {wishlistItems.length}
                   </p>
                 </article>
 
@@ -642,7 +638,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    ${mockOrders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                    ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
                   </p>
                 </article>
 
@@ -664,7 +660,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    2025
+                    {new Date().getFullYear()}
                   </p>
                 </article>
               </div>
@@ -684,7 +680,7 @@ export default function Dashboard() {
                   Recent Orders
                 </h3>
                 <div className="space-y-4">
-                  {mockOrders.slice(0, 3).map(order => {
+                  {orders.slice(0, 3).map(order => {
                     const statusColors = getStatusColor(order.status);
                     return (
                       <div 
@@ -745,7 +741,7 @@ export default function Dashboard() {
             </section>
           )}
 
-          {/* WISHLIST VIEW (Placeholder) */}
+          {/* WISHLIST VIEW */}
           {currentView === 'wishlist' && (
             <section aria-labelledby="wishlist-heading">
               <header className="mb-10">
@@ -760,25 +756,47 @@ export default function Dashboard() {
                   className="text-lg"
                   style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}
                 >
-                  Your saved items
+                  {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved
                 </p>
               </header>
-              <div 
-                className="rounded-3xl p-16 text-center"
-                style={{ 
-                  backgroundColor: '#FFFFFF',
-                  border: '2px solid #D4C4B0'
-                }}
-              >
-                <Heart className="w-16 h-16 mx-auto mb-4" style={{ color: '#F4A6B2' }} aria-hidden="true" />
-                <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-                  Wishlist feature coming soon
-                </p>
-              </div>
+              {wishlistLoading ? (
+                <div className="rounded-3xl p-16 text-center" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: '#7A9070' }} />
+                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Loading wishlist…</p>
+                </div>
+              ) : wishlistItems.length === 0 ? (
+                <div className="rounded-3xl p-16 text-center" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
+                  <Heart className="w-16 h-16 mx-auto mb-4" style={{ color: '#F4A6B2' }} aria-hidden="true" />
+                  <p className="mb-4" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Your wishlist is empty</p>
+                  <Link to="/shop" className="inline-block rounded-full px-8 py-3 transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
+                    Browse Products
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {wishlistItems.map(item => (
+                    <div key={item.id} className="flex gap-4 p-4 rounded-2xl" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
+                      <Link to={`/product/${item.productId}`}>
+                        <img src={item.image} alt={item.name} className="w-20 h-20 rounded-xl object-cover" style={{ border: '2px solid #F0F4F0' }} />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/product/${item.productId}`}>
+                          <h3 className="text-sm mb-1 truncate hover:opacity-70 transition-all" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{item.name}</h3>
+                        </Link>
+                        <p className="text-lg mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${item.price.toFixed(2)}</p>
+                        <div className="flex gap-2">
+                          <button onClick={() => { void addToCart(item.productId); showSuccessToast('Added to cart', item.name); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
+                          <button onClick={() => void removeFromWishlist(item.id)} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
-          {/* SETTINGS VIEW (Placeholder) */}
+          {/* SETTINGS VIEW */}
           {currentView === 'settings' && (
             <section aria-labelledby="settings-heading">
               <header className="mb-10">
@@ -797,16 +815,39 @@ export default function Dashboard() {
                 </p>
               </header>
               <div 
-                className="rounded-3xl p-16 text-center"
+                className="rounded-3xl p-8"
                 style={{ 
                   backgroundColor: '#FFFFFF',
                   border: '2px solid #D4C4B0'
                 }}
               >
-                <Settings className="w-16 h-16 mx-auto mb-4" style={{ color: '#7A9070' }} aria-hidden="true" />
-                <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-                  Settings feature coming soon
-                </p>
+                <h3 className="text-xl mb-6" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>Account Information</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: '#FAF8F3' }}>
+                    <div>
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Name</p>
+                      <p style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{fullName || authSession.firstName}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: '#FAF8F3' }}>
+                    <div>
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Email</p>
+                      <p style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{authSession.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: '#FAF8F3' }}>
+                    <div>
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Total Orders</p>
+                      <p style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{orders.length}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: '#FAF8F3' }}>
+                    <div>
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Wishlist Items</p>
+                      <p style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{wishlistItems.length}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           )}

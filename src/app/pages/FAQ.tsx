@@ -1,42 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Search, HelpCircle } from 'lucide-react';
+import { Search, HelpCircle, Loader2 } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
+import { fetchFAQs, type FAQ as FAQItem } from '../lib/faqs';
 
 export default function FAQ() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // FAQ data
-  const faqs = [
-    {
-      id: 1,
-      question: 'What are your shipping options and delivery times?',
-      answer: 'We offer standard shipping (5-7 business days) for $5.99 and express shipping (2-3 business days) for $12.99. Free standard shipping on orders over $75. All orders are processed within 1-2 business days. You\'ll receive a tracking number once your order ships.'
-    },
-    {
-      id: 2,
-      question: 'What is your return and exchange policy?',
-      answer: 'We accept returns within 30 days of delivery for a full refund. Items must be unused, in original packaging, and in the same condition you received them. Exchanges are free - just contact us and we\'ll send you a prepaid shipping label. Custom or personalized items cannot be returned unless defective.'
-    },
-    {
-      id: 3,
-      question: 'Are your mugs dishwasher and microwave safe?',
-      answer: 'Yes! All Cozip mugs are made from high-quality ceramic that is both dishwasher and microwave safe. However, we recommend hand washing to preserve the beauty of the design and extend the life of your mug. Avoid sudden temperature changes to prevent cracking.'
-    },
-    {
-      id: 4,
-      question: 'Do you offer gift wrapping or custom messages?',
-      answer: 'Absolutely! We offer complimentary gift wrapping on all orders. During checkout, select the "Gift Wrap" option and add a personalized message. Your mug will arrive beautifully wrapped in our signature cream packaging with a handwritten note card.'
-    },
-    {
-      id: 5,
-      question: 'How do I care for my Cozip mug?',
-      answer: 'To keep your mug looking beautiful: hand wash with mild soap when possible, avoid abrasive scrubbers, don\'t soak for extended periods, and store in a safe place. With proper care, your Cozip mug will bring you cozy moments for years to come!'
-    }
-  ];
+  useEffect(() => {
+    fetchFAQs()
+      .then(setFaqs)
+      .catch(() => setFaqs([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Filter FAQs based on search
   const filteredFaqs = faqs.filter(faq =>

@@ -8,6 +8,33 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
+alter table public.profiles
+  add column if not exists role text not null default 'user',
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+update public.profiles
+set role = case
+  when lower(trim(coalesce(role, ''))) = 'admin' then 'admin'
+  else 'user'
+end
+where role is null
+   or lower(trim(role)) not in ('user', 'admin')
+   or role <> lower(trim(role));
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'profiles_role_check'
+  ) then
+    alter table public.profiles
+      add constraint profiles_role_check check (role in ('user', 'admin'));
+  end if;
+end
+$$;
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
@@ -49,6 +76,39 @@ create table if not exists public.cart_items (
   updated_at timestamptz not null default now(),
   unique (user_id, product_id)
 );
+
+alter table public.cart_items
+  add column if not exists user_id uuid references auth.users(id) on delete cascade,
+  add column if not exists product_id text,
+  add column if not exists quantity integer not null default 1,
+  add column if not exists created_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+update public.cart_items
+set quantity = 1
+where quantity is null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'cart_items_quantity_check'
+  ) then
+    alter table public.cart_items
+      add constraint cart_items_quantity_check check (quantity > 0);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'cart_items_user_id_product_id_key'
+  ) then
+    alter table public.cart_items
+      add constraint cart_items_user_id_product_id_key unique (user_id, product_id);
+  end if;
+end
+$$;
 
 alter table public.cart_items enable row level security;
 

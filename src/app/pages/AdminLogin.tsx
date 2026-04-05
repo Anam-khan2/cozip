@@ -172,7 +172,7 @@ export default function AdminLogin() {
               type="button"
               className="text-sm transition-all hover:opacity-70"
               style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontWeight: 500 }}
-              onClick={() => showInfoToast('Password reset is not configured yet.', 'Use the demo admin credentials shown below. ')}
+              onClick={() => showInfoToast('Password reset is not configured yet.', 'Please contact the site administrator to reset your password.')}
               aria-label="Open admin password reset information"
             >
               Forgot password?
@@ -195,26 +195,6 @@ export default function AdminLogin() {
             Login to Dashboard
           </button>
         </form>
-
-        {/* Demo Credentials Info */}
-        <div 
-          className="mt-6 p-4 rounded-xl"
-          style={{ backgroundColor: '#F0F4F0' }}
-        >
-          <p 
-            className="text-xs mb-2"
-            style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontWeight: 600 }}
-          >
-            Demo Credentials:
-          </p>
-          <p 
-            className="text-xs"
-            style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}
-          >
-            Email: admin@cozip.com<br />
-            Password: admin123
-          </p>
-        </div>
 
         {/* Back to Store Link */}
         <footer className="mt-6 text-center">

@@ -65,92 +65,6 @@ type CreateTrackedOrderInput = {
 
 const STORAGE_KEY = 'snugsip-guest-orders';
 
-const sampleOrders: TrackedOrder[] = [
-  {
-    orderNumber: 'CZP-10892',
-    customerName: 'Sarah Martinez',
-    email: 'sarah.martinez@example.com',
-    phone: '+92 300 1234567',
-    shippingAddressLine: 'House 24, Gulberg III',
-    city: 'Lahore',
-    state: 'PB',
-    zipCode: '54000',
-    shippingMethod: 'standard',
-    status: 'In Transit',
-    statusDescription: 'Your parcel has left the Lahore dispatch hub and is moving toward the destination city.',
-    carrier: 'BlueEX',
-    trackingCode: 'BLX-CZP10892',
-    originCity: 'Lahore',
-    destinationCity: 'Karachi',
-    estimatedDelivery: 'March 13, 2026',
-    orderPlacedAt: 'March 10, 2026, 11:10 AM',
-    items: [
-      {
-        id: 1,
-        productId: 1,
-        name: 'Handmade Aesthetic Pastel Cloud Mug - Limited 2026 Edition',
-        price: 24.99,
-        quantity: 2,
-        image: 'https://images.unsplash.com/photo-1674317872332-ca9c2cd00953?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhZXN0aGV0aWMlMjBjZXJhbWljJTIwbXVnJTIwY29mZmVlfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-      },
-      {
-        id: 2,
-        productId: 2,
-        name: 'Pink Pastel Mug',
-        price: 22.99,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1588165231518-b4b22bfa0ddf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwaW5rJTIwYWVzdGhldGljJTIwY29mZmVlJTIwbXVnfGVufDF8fHx8MTc3MjgzNDAxNnww&ixlib=rb-4.1.0&q=80&w=1080',
-      },
-    ],
-    subtotal: 72.97,
-    shippingCost: 5.99,
-    tax: 5.84,
-    total: 84.8,
-    timeline: [
-      {
-        id: 'confirmed',
-        label: 'Order Confirmed',
-        description: 'Payment was received and your order entered the fulfillment queue.',
-        location: 'Cozip Storefront',
-        timestamp: 'March 10, 2026, 11:10 AM',
-        completed: true,
-      },
-      {
-        id: 'packed',
-        label: 'Parcel Packed',
-        description: 'Your mugs were quality-checked, wrapped, and sealed for dispatch.',
-        location: 'Lahore Studio Warehouse',
-        timestamp: 'March 10, 2026, 2:45 PM',
-        completed: true,
-      },
-      {
-        id: 'shipped',
-        label: 'Shipped from Origin',
-        description: 'The parcel was handed over to BlueEX and scanned at the origin hub.',
-        location: 'Lahore Dispatch Hub',
-        timestamp: 'March 11, 2026, 8:20 AM',
-        completed: true,
-      },
-      {
-        id: 'in-transit',
-        label: 'Reached Regional Hub',
-        description: 'The shipment reached the main sorting facility and is being routed onward.',
-        location: 'Karachi Sorting Hub',
-        timestamp: 'March 12, 2026, 6:40 AM',
-        completed: true,
-      },
-      {
-        id: 'delivery',
-        label: 'Out for Delivery',
-        description: 'The parcel is scheduled for last-mile delivery after local scan.',
-        location: 'Karachi Delivery Station',
-        timestamp: 'Expected by March 13, 2026',
-        completed: false,
-      },
-    ],
-  },
-];
-
 function canUseStorage() {
   return typeof window !== 'undefined';
 }
@@ -215,8 +129,8 @@ export function buildOrderTrackingPath(value: string) {
 
 export function getTrackedOrder(orderNumber: string) {
   const normalizedOrderNumber = normalizeOrderNumber(orderNumber);
-  const allOrders = [...readStoredOrders(), ...sampleOrders];
-  return allOrders.find((order) => normalizeOrderNumber(order.orderNumber) === normalizedOrderNumber) ?? null;
+  const storedOrders = readStoredOrders();
+  return storedOrders.find((order) => normalizeOrderNumber(order.orderNumber) === normalizedOrderNumber) ?? null;
 }
 
 export async function getTrackedOrderFromSupabase(orderNumber: string): Promise<TrackedOrder | null> {
@@ -286,7 +200,7 @@ function mapRowToTrackedOrder(row: any): TrackedOrder {
 
 export function getMostRecentTrackedOrder() {
   const storedOrders = readStoredOrders();
-  return storedOrders[0] ?? sampleOrders[0] ?? null;
+  return storedOrders[0] ?? null;
 }
 
 export function saveTrackedOrder(order: TrackedOrder) {

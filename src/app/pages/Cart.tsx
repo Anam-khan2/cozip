@@ -8,11 +8,13 @@ import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { useCart, updateCartQuantity, removeFromCart } from '../lib/cart';
 import { PageSeo } from '../components/PageSeo';
+import { validateCoupon } from '../lib/coupons';
 
 export default function Cart() {
   const { items: cartItems, loading } = useCart();
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [isValidating, setIsValidating] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const taxRate = 0.08;
@@ -29,16 +31,27 @@ export default function Cart() {
     void removeFromCart(itemId);
   };
 
-  const applyDiscount = (event: React.FormEvent) => {
+  const applyDiscount = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!discountCode.trim()) return;
 
-    if (discountCode.toUpperCase() === 'COZY10') {
-      setAppliedDiscount(subtotal * 0.1);
-      showSuccessToast('Discount applied', 'COZY10 has been added to your order.');
-      return;
+    setIsValidating(true);
+    try {
+      const coupon = await validateCoupon(discountCode);
+      if (coupon) {
+        const discount = coupon.discountType === 'percent'
+          ? subtotal * (coupon.discountValue / 100)
+          : coupon.discountValue;
+        setAppliedDiscount(discount);
+        showSuccessToast('Discount applied', `${coupon.code} has been added to your order.`);
+      } else {
+        showErrorToast('Invalid discount code', 'This code is expired, used up, or does not exist.');
+      }
+    } catch {
+      showErrorToast('Error validating coupon', 'Please try again.');
+    } finally {
+      setIsValidating(false);
     }
-
-    showErrorToast('Invalid discount code', 'Try COZY10 for the current demo checkout flow.');
   };
 
   return (
@@ -182,8 +195,8 @@ export default function Cart() {
                         <Tag className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: '#7A9070' }} aria-hidden="true" />
                         <input type="text" id="discount-code" value={discountCode} onChange={(event) => setDiscountCode(event.target.value)} placeholder="Enter code" className="w-full rounded-xl py-3 pl-10 pr-4 outline-none" style={{ backgroundColor: '#FAF8F3', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} />
                       </div>
-                      <button type="submit" className="w-full rounded-xl px-6 py-3 transition-all hover:scale-105 sm:w-auto" style={{ backgroundColor: '#7A9070', color: '#ffffff', fontFamily: 'Inter, sans-serif', fontWeight: 500 }} aria-label="Apply discount code">
-                        Apply
+                      <button type="submit" disabled={isValidating} className="w-full rounded-xl px-6 py-3 transition-all hover:scale-105 sm:w-auto disabled:opacity-50" style={{ backgroundColor: '#7A9070', color: '#ffffff', fontFamily: 'Inter, sans-serif', fontWeight: 500 }} aria-label="Apply discount code">
+                        {isValidating ? 'Validating...' : 'Apply'}
                       </button>
                     </div>
                     {appliedDiscount > 0 && (
