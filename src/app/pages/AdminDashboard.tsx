@@ -8,7 +8,7 @@ import cozipLogo from '../../../assets/cozip-web-logo.png';
 import { showInfoToast } from '../lib/notifications';
 import { PageSeo } from '../components/PageSeo';
 import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
-import { fetchCoupons, createCoupon, deleteCoupon, type Coupon } from '../lib/coupons';
+import { fetchCoupons, createCoupon, deleteCoupon, updateCouponStatus, type Coupon } from '../lib/coupons';
 
 // Email Template type
 interface EmailTemplate {
@@ -1458,6 +1458,12 @@ export default function AdminDashboard() {
                       >
                         Status
                       </th>
+                      <th 
+                        className="text-left px-6 py-4 text-sm"
+                        style={{ color: '#7A9070', fontWeight: 600 }}
+                      >
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1521,6 +1527,46 @@ export default function AdminDashboard() {
                           >
                             {coupon.status}
                           </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {coupon.status === 'Active' ? (
+                              <button
+                                onClick={async () => {
+                                  const ok = await updateCouponStatus(coupon.id, 'Expired');
+                                  if (ok) setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, status: 'Expired' } : c));
+                                }}
+                                className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                                style={{ backgroundColor: '#FEF3C7', color: '#92400E', fontWeight: 600, border: '1px solid #FDE68A' }}
+                              >
+                                Deactivate
+                              </button>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  const ok = await updateCouponStatus(coupon.id, 'Active');
+                                  if (ok) setCoupons(prev => prev.map(c => c.id === coupon.id ? { ...c, status: 'Active' } : c));
+                                }}
+                                className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                                style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8', fontWeight: 600, border: '1px solid #BFDBFE' }}
+                              >
+                                Activate
+                              </button>
+                            )}
+                            <button
+                              onClick={async () => {
+                                const ok = await deleteCoupon(coupon.id);
+                                if (ok) setCoupons(prev => prev.filter(c => c.id !== coupon.id));
+                              }}
+                              className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:opacity-80"
+                              style={{ backgroundColor: '#FEE2E2', color: '#DC2626', fontWeight: 600, border: '1px solid #FCA5A5' }}
+                            >
+                              <Trash2 className="h-3 w-3 inline mr-1" />
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
