@@ -238,8 +238,8 @@ export default function Checkout() {
                       <input type="text" id="address" value={addressForm.address} onChange={(event) => setAddressForm({ ...addressForm, address: event.target.value })} required autoComplete="street-address" className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="123 Main Street" />
                     </div>
 
-                    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-6">
-                      <div className="sm:col-span-3">
+                    <div className="mb-5 grid grid-cols-1 gap-4 sm:grid-cols-4">
+                      <div className="sm:col-span-2">
                         <label htmlFor="city" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>City</label>
                         <input type="text" id="city" value={addressForm.city} onChange={(event) => setAddressForm({ ...addressForm, city: event.target.value })} required autoComplete="address-level2" className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} />
                       </div>
@@ -247,7 +247,7 @@ export default function Checkout() {
                         <label htmlFor="state" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>State</label>
                         <input type="text" id="state" value={addressForm.state} onChange={(event) => setAddressForm({ ...addressForm, state: event.target.value })} required maxLength={2} autoComplete="address-level1" className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="CA" />
                       </div>
-                      <div className="sm:col-span-2">
+                      <div className="sm:col-span-1">
                         <label htmlFor="zipCode" className="mb-2 block text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>Zip Code</label>
                         <input type="text" id="zipCode" value={addressForm.zipCode} onChange={(event) => setAddressForm({ ...addressForm, zipCode: event.target.value })} required autoComplete="postal-code" className="w-full rounded-xl px-4 py-3 outline-none transition-all focus:ring-2" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', color: '#4A5D45', fontFamily: 'Inter, sans-serif' }} placeholder="90210" />
                       </div>

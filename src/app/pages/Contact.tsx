@@ -36,7 +36,7 @@ export default function Contact() {
         <div className="store-shell">
           <Breadcrumbs items={[{ label: 'Contact' }]} className="mb-6" />
           <header className="mb-12 text-center">
-            <h1 className="mb-4 text-5xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>
+            <h1 className="mb-4 text-3xl sm:text-4xl lg:text-5xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>
               Get in Touch
             </h1>
             <p className="mx-auto max-w-2xl text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', lineHeight: 1.6 }}>
@@ -45,7 +45,7 @@ export default function Contact() {
           </header>
 
           <section className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-            <article className="rounded-3xl p-10" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' }}>
+            <article className="rounded-3xl p-6 sm:p-8 lg:p-10" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' }}>
               <h2 className="mb-6 text-3xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>
                 Contact Information
               </h2>
@@ -84,7 +84,7 @@ export default function Contact() {
               <img src="https://images.unsplash.com/photo-1771499931738-8ba90af8cae1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3p5JTIwd29ya3NwYWNlJTIwZGVzayUyMG11ZyUyMGNvZmZlZSUyMGFlc3RoZXRpY3xlbnwxfHx8fDE3NzI4Mzk5NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080" alt="Cozy workspace with mugs and coffee" className="w-full rounded-3xl" style={{ aspectRatio: '16 / 10', objectFit: 'cover', border: '2px solid #F0F4F0' }} />
             </article>
 
-            <article className="rounded-3xl p-10" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' }}>
+            <article className="rounded-3xl p-6 sm:p-8 lg:p-10" style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)' }}>
               <h2 className="mb-6 text-3xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>
                 Send us a Message
               </h2>

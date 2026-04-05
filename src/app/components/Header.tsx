@@ -135,7 +135,7 @@ export function Header() {
             {/* Cart Icon with Badge */}
             <Link 
               to="/cart"
-              className="relative p-2 md:p-2.5 rounded-full transition-all hover:scale-105"
+              className="relative p-2.5 md:p-2.5 rounded-full transition-all hover:scale-105"
               style={{ backgroundColor: '#F0F4F0' }}
               aria-label={`Shopping cart with ${cartCount} items`}
             >

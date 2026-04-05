@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Loader2 } from 'lucide-react';
+import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Loader2, Menu, X } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
@@ -44,6 +44,7 @@ function mapTrackedToOrder(tracked: TrackedOrder): Order {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<DashboardView>('orders');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const authSession = useAuthSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
@@ -114,18 +115,32 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FAF8F3' }}>
       <PageSeo title="My Account" />
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* LEFT SIDEBAR - Navigation */}
       <aside 
-        className="w-64 border-r flex-shrink-0 hidden lg:flex lg:flex-col"
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r flex-shrink-0 flex flex-col transform transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ 
           backgroundColor: '#FFFFFF',
           borderColor: '#D4C4B0'
         }}
         aria-label="Dashboard navigation"
       >
-        <div className="p-8">
-          {/* Logo */}
-          <BrandLogo className="mb-12 block" imageClassName="h-16 w-auto" />
+        <div className="p-8 flex-1 flex flex-col">
+          {/* Logo + close button */}
+          <div className="flex items-start justify-between mb-12">
+            <BrandLogo className="block" imageClassName="h-16 w-auto" />
+            <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
+              <X className="w-5 h-5" style={{ color: '#7A9070' }} />
+            </button>
+          </div>
 
           {/* User Info */}
           <div className="mb-10 pb-8 border-b" style={{ borderColor: '#D4C4B0' }}>
@@ -160,7 +175,7 @@ export default function Dashboard() {
               {/* Dashboard */}
               <li>
                 <button
-                  onClick={() => setCurrentView('overview')}
+                  onClick={() => { setCurrentView('overview'); setSidebarOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                   style={{
                     backgroundColor: currentView === 'overview' ? '#F4F3EF' : 'transparent',
@@ -178,7 +193,7 @@ export default function Dashboard() {
               {/* My Orders */}
               <li>
                 <button
-                  onClick={() => setCurrentView('orders')}
+                  onClick={() => { setCurrentView('orders'); setSidebarOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                   style={{
                     backgroundColor: currentView === 'orders' ? '#F4F3EF' : 'transparent',
@@ -196,7 +211,7 @@ export default function Dashboard() {
               {/* Wishlist */}
               <li>
                 <button
-                  onClick={() => setCurrentView('wishlist')}
+                  onClick={() => { setCurrentView('wishlist'); setSidebarOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                   style={{
                     backgroundColor: currentView === 'wishlist' ? '#F4F3EF' : 'transparent',
@@ -214,7 +229,7 @@ export default function Dashboard() {
               {/* Settings */}
               <li>
                 <button
-                  onClick={() => setCurrentView('settings')}
+                  onClick={() => { setCurrentView('settings'); setSidebarOpen(false); }}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                   style={{
                     backgroundColor: currentView === 'settings' ? '#F4F3EF' : 'transparent',
@@ -251,7 +266,23 @@ export default function Dashboard() {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-auto">
-        <div className="max-w-6xl mx-auto px-6 py-10 md:px-12 lg:py-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 md:px-12 lg:py-20">
+          {/* Mobile header with hamburger */}
+          <div className="flex items-center gap-3 mb-4 lg:hidden">
+            <button
+              className="p-2 rounded-lg hover:bg-gray-100"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
+            >
+              <Menu className="w-5 h-5" style={{ color: '#7A9070' }} />
+            </button>
+            <h2 className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>
+              {currentView === 'overview' && 'Dashboard'}
+              {currentView === 'orders' && 'My Orders'}
+              {currentView === 'wishlist' && 'Wishlist'}
+              {currentView === 'settings' && 'Settings'}
+            </h2>
+          </div>
           <Breadcrumbs items={[{ label: 'My Account' }]} className="mb-8" />
           
           {/* ORDERS VIEW */}
@@ -261,7 +292,7 @@ export default function Dashboard() {
               <header className="mb-10">
                 <h2 
                   id="orders-heading"
-                  className="text-4xl mb-3" 
+                  className="text-2xl sm:text-3xl lg:text-4xl mb-3" 
                   style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}
                 >
                   My Orders
@@ -276,14 +307,14 @@ export default function Dashboard() {
 
               {/* Orders Table */}
               <div 
-                className="rounded-3xl overflow-hidden"
+                className="rounded-3xl overflow-hidden overflow-x-auto"
                 style={{ 
                   backgroundColor: '#FFFFFF',
                   border: '2px solid #D4C4B0',
                   boxShadow: '0 10px 40px rgba(122, 144, 112, 0.12)'
                 }}
               >
-                <table className="w-full" role="table">
+                <table className="w-full min-w-[600px]" role="table">
                   <thead>
                     <tr 
                       className="border-b"

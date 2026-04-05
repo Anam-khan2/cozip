@@ -39,12 +39,12 @@ export default function FAQ() {
         <header className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-4">
             <HelpCircle 
-              className="w-10 h-10" 
+              className="w-7 h-7 sm:w-10 sm:h-10" 
               style={{ color: '#7A9070' }}
               aria-hidden="true"
             />
             <h1 
-              className="text-5xl"
+              className="text-3xl sm:text-4xl lg:text-5xl"
               style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
             >
               How can we help?

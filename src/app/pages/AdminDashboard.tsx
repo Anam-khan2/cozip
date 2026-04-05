@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight, Menu, X } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
@@ -65,6 +65,7 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
 
 export default function AdminDashboard() {
   const [activeView, setActiveView] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons' | 'analytics' | 'emails'>('orders');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [emailTab, setEmailTab] = useState<'campaigns' | 'templates'>('templates');
   const { data: products, error: productsError, loading: productsLoading, refetch: refetchProducts } = useProducts();
   const [editProduct, setEditProduct] = useState<EditProductFormState | null>(null);
@@ -445,9 +446,18 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#FAFAFA' }}>
       <PageSeo title="Admin Dashboard" />
+
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
       <aside 
-        className="w-64 border-r"
+        className={`fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-200 lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ 
           backgroundColor: '#FFFFFF',
           borderColor: '#E5E7EB'
@@ -455,7 +465,7 @@ export default function AdminDashboard() {
         aria-label="Admin navigation"
       >
         {/* Admin Logo & Header */}
-        <header className="p-6 border-b" style={{ borderColor: '#E5E7EB' }}>
+        <header className="p-6 border-b flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
           <Link to="/" className="block">
             <img src={cozipLogo} alt="Cozip" className="mb-3 inline-block h-16 w-auto" />
             <p 
@@ -465,6 +475,9 @@ export default function AdminDashboard() {
               Admin Dashboard
             </p>
           </Link>
+          <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
+            <X className="w-5 h-5" style={{ color: '#7A9070' }} />
+          </button>
         </header>
 
         {/* Navigation Menu */}
@@ -473,7 +486,7 @@ export default function AdminDashboard() {
             {/* Overview Link */}
             <li>
               <button
-                onClick={() => setActiveView('overview')}
+                onClick={() => { setActiveView('overview'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'overview' ? '#F0F4F0' : 'transparent',
@@ -491,7 +504,7 @@ export default function AdminDashboard() {
             {/* Products Link */}
             <li>
               <button
-                onClick={() => setActiveView('products')}
+                onClick={() => { setActiveView('products'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'products' ? '#F0F4F0' : 'transparent',
@@ -509,7 +522,7 @@ export default function AdminDashboard() {
             {/* Orders Link */}
             <li>
               <button
-                onClick={() => setActiveView('orders')}
+                onClick={() => { setActiveView('orders'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'orders' ? '#F0F4F0' : 'transparent',
@@ -527,7 +540,7 @@ export default function AdminDashboard() {
             {/* Customers Link */}
             <li>
               <button
-                onClick={() => setActiveView('customers')}
+                onClick={() => { setActiveView('customers'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'customers' ? '#F0F4F0' : 'transparent',
@@ -545,7 +558,7 @@ export default function AdminDashboard() {
             {/* Coupons Link */}
             <li>
               <button
-                onClick={() => setActiveView('coupons')}
+                onClick={() => { setActiveView('coupons'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'coupons' ? '#F0F4F0' : 'transparent',
@@ -563,7 +576,7 @@ export default function AdminDashboard() {
             {/* Analytics Link */}
             <li>
               <button
-                onClick={() => setActiveView('analytics')}
+                onClick={() => { setActiveView('analytics'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'analytics' ? '#F0F4F0' : 'transparent',
@@ -581,7 +594,7 @@ export default function AdminDashboard() {
             {/* Emails Link */}
             <li>
               <button
-                onClick={() => setActiveView('emails')}
+                onClick={() => { setActiveView('emails'); setSidebarOpen(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: activeView === 'emails' ? '#F0F4F0' : 'transparent',
@@ -599,7 +612,7 @@ export default function AdminDashboard() {
         </nav>
 
         {/* Back to Store Link */}
-        <footer className="absolute bottom-0 w-64 p-4 border-t" style={{ borderColor: '#E5E7EB' }}>
+        <footer className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ borderColor: '#E5E7EB' }}>
           <Link
             to="/"
             className="block text-center py-3 rounded-xl transition-all hover:opacity-70"
@@ -620,14 +633,22 @@ export default function AdminDashboard() {
       <main className="flex-1 overflow-auto">
         {/* Header with Title and Action Button */}
         <header 
-          className="border-b px-8 py-6 flex items-center justify-between"
+          className="border-b px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center justify-between gap-4"
           style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
         >
-          <div>
-            <h2 
-              className="text-3xl mb-1" 
-              style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar"
             >
+              <Menu className="w-5 h-5" style={{ color: '#7A9070' }} />
+            </button>
+            <div className="min-w-0">
+              <h2 
+                className="text-xl sm:text-2xl lg:text-3xl mb-1 truncate" 
+                style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
+              >
               {activeView === 'overview' && 'Dashboard Overview'}
               {activeView === 'products' && 'Products Management'}
               {activeView === 'orders' && 'Orders Management'}
@@ -648,13 +669,14 @@ export default function AdminDashboard() {
               {activeView === 'analytics' && 'Analyze sales trends and performance'}
               {activeView === 'emails' && 'Manage email campaigns and templates'}
             </p>
+            </div>
           </div>
 
           {/* Add Product/Coupon Button */}
           {activeView === 'products' && (
             <Link
               to="/admin/add-product"
-              className="flex items-center gap-2 px-6 py-3 rounded-full transition-all hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 rounded-full transition-all hover:scale-105 text-sm sm:text-base flex-shrink-0"
               style={{
                 backgroundColor: '#7A9070',
                 color: '#FFFFFF',
@@ -705,7 +727,7 @@ export default function AdminDashboard() {
 
         {/* ORDERS VIEW CONTENT */}
         {activeView === 'orders' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Metric Cards */}
             <section 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
@@ -842,14 +864,14 @@ export default function AdminDashboard() {
 
               {/* Table Container */}
               <div 
-                className="rounded-2xl border overflow-hidden"
+                className="rounded-2xl border overflow-hidden overflow-x-auto"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
                 }}
               >
-                <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                   <thead>
                     <tr 
                       style={{ 
@@ -972,7 +994,7 @@ export default function AdminDashboard() {
 
         {/* PRODUCTS VIEW CONTENT */}
         {activeView === 'products' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {(productActionError || productActionMessage) && (
               <div
                 className="mb-6 rounded-2xl border px-5 py-4"
@@ -1123,7 +1145,7 @@ export default function AdminDashboard() {
 
               {/* Table Container */}
               <div 
-                className="rounded-2xl border overflow-hidden"
+                className="rounded-2xl border overflow-hidden overflow-x-auto"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E5E7EB',
@@ -1139,7 +1161,7 @@ export default function AdminDashboard() {
                     {productsError}
                   </div>
                 ) : (
-                  <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                     <thead>
                       <tr 
                         style={{ 
@@ -1276,7 +1298,7 @@ export default function AdminDashboard() {
 
         {/* COUPONS VIEW CONTENT */}
         {activeView === 'coupons' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Metric Cards */}
             <section 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
@@ -1413,14 +1435,14 @@ export default function AdminDashboard() {
 
               {/* Table Container */}
               <div 
-                className="rounded-2xl border overflow-hidden"
+                className="rounded-2xl border overflow-hidden overflow-x-auto"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E5E7EB',
                   boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
                 }}
               >
-                <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                   <thead>
                     <tr 
                       style={{ 
@@ -1579,7 +1601,7 @@ export default function AdminDashboard() {
 
         {/* ANALYTICS VIEW CONTENT */}
         {activeView === 'analytics' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Metric Cards */}
             <section 
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
@@ -1704,7 +1726,7 @@ export default function AdminDashboard() {
 
             <section className="grid grid-cols-1 xl:grid-cols-[1.7fr_1fr] gap-6" aria-label="Analytics insights">
               <div 
-                className="rounded-2xl border overflow-hidden"
+                className="rounded-2xl border overflow-hidden overflow-x-auto"
                 style={{
                   backgroundColor: '#FFFFFF',
                   borderColor: '#E5E7EB',
@@ -1796,7 +1818,7 @@ export default function AdminDashboard() {
 
         {/* EMAILS VIEW CONTENT */}
         {activeView === 'emails' && (
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Email Tabs */}
             <section className="mb-4">
               <div className="flex items-center gap-4">
@@ -1847,14 +1869,14 @@ export default function AdminDashboard() {
 
                 {/* Table Container */}
                 <div 
-                  className="rounded-2xl border overflow-hidden"
+                  className="rounded-2xl border overflow-hidden overflow-x-auto"
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
                   }}
                 >
-                  <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                     <thead>
                       <tr 
                         style={{ 
@@ -1947,14 +1969,14 @@ export default function AdminDashboard() {
 
                 {/* Table Container */}
                 <div 
-                  className="rounded-2xl border overflow-hidden"
+                  className="rounded-2xl border overflow-hidden overflow-x-auto"
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderColor: '#E5E7EB',
                     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
                   }}
                 >
-                  <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                     <thead>
                       <tr 
                         style={{ 
@@ -2407,13 +2429,13 @@ export default function AdminDashboard() {
             </section>
 
             <section className="grid grid-cols-1 xl:grid-cols-[1.55fr_1fr] gap-6" aria-label="Customer insights">
-              <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
+              <div className="rounded-2xl border overflow-hidden overflow-x-auto" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                 <div className="border-b px-6 py-5" style={{ borderColor: '#F3F4F6' }}>
                   <h3 className="text-xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Customer Directory</h3>
                   <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.875rem' }}>All registered user profiles from the database.</p>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full" style={{ fontFamily: 'Inter, sans-serif' }}>
+                  <table className="w-full min-w-[640px]" style={{ fontFamily: 'Inter, sans-serif' }}>
                     <thead>
                       <tr style={{ backgroundColor: '#FAFAFA', borderBottom: '1px solid #E5E7EB' }}>
                         <th className="px-6 py-4 text-left text-sm" style={{ color: '#7A9070', fontWeight: 600 }}>Customer</th>
@@ -2488,9 +2510,9 @@ export default function AdminDashboard() {
       </main>
 
       {editProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-8">
           <div
-            className="w-full max-w-3xl rounded-3xl border p-8"
+            className="w-full max-w-3xl rounded-3xl border p-4 sm:p-6 lg:p-8 my-auto"
             style={{
               backgroundColor: '#FFFFFF',
               borderColor: '#E5E7EB',

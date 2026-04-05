@@ -59,7 +59,7 @@ export default function OrderSuccess() {
           <header className="mb-8">
             <h1 
               id="success-heading"
-              className="text-5xl mb-6" 
+              className="text-3xl sm:text-4xl lg:text-5xl mb-6" 
               style={{ 
                 fontFamily: 'Playfair Display, serif', 
                 color: '#5A7050', 

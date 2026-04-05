@@ -286,7 +286,7 @@ export default function ProductDetail() {
         </article>
 
         <section className="store-shell py-10 lg:py-20" aria-labelledby="reviews-heading">
-          <h2 id="reviews-heading" className="mb-12 text-4xl" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>
+          <h2 id="reviews-heading" className="mb-8 sm:mb-12 text-2xl sm:text-3xl lg:text-4xl" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>
             Customer Reviews
           </h2>
 
@@ -294,7 +294,7 @@ export default function ProductDetail() {
             <aside className="lg:col-span-1">
               <div className="sticky top-24 rounded-3xl p-8" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', boxShadow: '0 10px 40px rgba(122, 144, 112, 0.12)' }}>
                 <div className="mb-8 text-center">
-                  <p className="mb-3 text-6xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>
+                  <p className="mb-3 text-4xl sm:text-5xl lg:text-6xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>
                     {product.rating.toFixed(1)}
                   </p>
                   <p className="mb-4 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>out of 5</p>

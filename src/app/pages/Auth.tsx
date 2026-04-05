@@ -161,7 +161,7 @@ export default function Auth() {
               <header className="mb-8">
                 <h2 
                   id="login-heading"
-                  className="text-4xl mb-3" 
+                  className="text-2xl sm:text-3xl lg:text-4xl mb-3" 
                   style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}
                 >
                   Welcome Back
@@ -338,7 +338,7 @@ export default function Auth() {
               <header className="mb-8">
                 <h2 
                   id="register-heading"
-                  className="text-4xl mb-3" 
+                  className="text-2xl sm:text-3xl lg:text-4xl mb-3" 
                   style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}
                 >
                   Create Account

@@ -19,11 +19,7 @@ export default function About() {
           <img
             src="https://images.unsplash.com/photo-1753164725848-471a8abbb6f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3R0ZXJ5JTIwY2xheSUyMG1vbGRpbmclMjBoYW5kcyUyMGNlcmFtaWN8ZW58MXx8fHwxNzcyODM5OTc2fDA&ixlib=rb-4.1.0&q=80&w=1080"
             alt="Hands molding clay on a pottery wheel"
-            className="w-full"
-            style={{
-              aspectRatio: '21 / 9',
-              objectFit: 'cover',
-            }}
+            className="w-full aspect-[4/3] sm:aspect-[16/9] lg:aspect-[21/9] object-cover"
           />
         </section>
 
@@ -32,7 +28,7 @@ export default function About() {
           <div className="store-shell-narrow text-center">
           <Breadcrumbs items={[{ label: 'About' }]} className="mb-6 text-left" />
           <h1 
-            className="text-5xl mb-6"
+            className="text-3xl sm:text-4xl lg:text-5xl mb-6"
             style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
           >
             Our Story
@@ -68,7 +64,7 @@ export default function About() {
           <div className="store-shell">
             <header className="text-center mb-12">
               <h2 
-                className="text-4xl mb-4"
+                className="text-2xl sm:text-3xl lg:text-4xl mb-4"
                 style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
               >
                 What We Stand For
@@ -195,7 +191,7 @@ export default function About() {
         <section className="store-section">
           <div className="store-shell-narrow text-center">
           <h2 
-            className="text-4xl mb-6"
+            className="text-2xl sm:text-3xl lg:text-4xl mb-6"
             style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
           >
             Join the Cozip Community

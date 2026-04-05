@@ -23,7 +23,7 @@ export default function Legal() {
         {/* Page Header - Centered */}
         <header className="text-center mb-12">
           <h1 
-            className="text-5xl mb-4"
+            className="text-3xl sm:text-4xl lg:text-5xl mb-4"
             style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}
           >
             {pageTitle}
@@ -40,7 +40,7 @@ export default function Legal() {
         {/* TERMS & CONDITIONS CONTENT */}
         {isTerms && (
           <article 
-            className="p-10 rounded-3xl"
+            className="p-6 sm:p-8 lg:p-10 rounded-3xl"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E5E7EB',
@@ -217,7 +217,7 @@ export default function Legal() {
         {/* PRIVACY POLICY CONTENT */}
         {isPrivacy && (
           <article 
-            className="p-10 rounded-3xl"
+            className="p-6 sm:p-8 lg:p-10 rounded-3xl"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E5E7EB',
@@ -424,7 +424,7 @@ export default function Legal() {
         {/* GENERIC LEGAL (if neither terms nor privacy) */}
         {!isTerms && !isPrivacy && (
           <article 
-            className="p-10 rounded-3xl text-center"
+            className="p-6 sm:p-8 lg:p-10 rounded-3xl text-center"
             style={{
               backgroundColor: '#FFFFFF',
               border: '1px solid #E5E7EB',

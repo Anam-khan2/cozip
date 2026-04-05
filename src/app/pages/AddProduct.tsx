@@ -192,7 +192,7 @@ export default function AddProduct() {
     <div className="min-h-screen" style={{ backgroundColor: '#FAFAFA' }}>
       <PageSeo title="Add Product" />
       <header 
-        className="border-b px-8 py-6"
+        className="border-b px-4 sm:px-6 lg:px-8 py-4 sm:py-6"
         style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}
       >
         <div className="flex items-center gap-4 mb-2">
@@ -223,7 +223,7 @@ export default function AddProduct() {
         </p>
       </header>
 
-      <main className="p-8">
+      <main className="p-4 sm:p-6 lg:p-8">
         <form onSubmit={handleSubmit} className="max-w-6xl mx-auto space-y-8">
           {submitError && (
             <div
