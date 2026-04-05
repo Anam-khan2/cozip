@@ -1,6 +1,23 @@
 -- Wishlist, Coupons, FAQs tables and admin RLS policies
 -- Run this in the Supabase SQL Editor
 
+-- ==================== ADMIN HELPER (SECURITY DEFINER) ====================
+-- This function bypasses RLS to check admin status, avoiding infinite
+-- recursion when profiles policies themselves need an admin check.
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
 -- ==================== WISHLIST ====================
 
 create table if not exists public.wishlist_items (
@@ -57,23 +74,17 @@ create policy "Anyone can read coupons"
 drop policy if exists "Admins can insert coupons" on public.coupons;
 create policy "Admins can insert coupons"
   on public.coupons for insert
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  with check (public.is_admin());
 
 drop policy if exists "Admins can update coupons" on public.coupons;
 create policy "Admins can update coupons"
   on public.coupons for update
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (public.is_admin());
 
 drop policy if exists "Admins can delete coupons" on public.coupons;
 create policy "Admins can delete coupons"
   on public.coupons for delete
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (public.is_admin());
 
 create or replace function public.set_coupons_updated_at()
 returns trigger language plpgsql as $$
@@ -106,23 +117,17 @@ create policy "Anyone can read faqs"
 drop policy if exists "Admins can insert faqs" on public.faqs;
 create policy "Admins can insert faqs"
   on public.faqs for insert
-  with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  with check (public.is_admin());
 
 drop policy if exists "Admins can update faqs" on public.faqs;
 create policy "Admins can update faqs"
   on public.faqs for update
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (public.is_admin());
 
 drop policy if exists "Admins can delete faqs" on public.faqs;
 create policy "Admins can delete faqs"
   on public.faqs for delete
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (public.is_admin());
 
 -- ==================== ADMIN RLS ON EXISTING TABLES ====================
 
@@ -132,16 +137,14 @@ create policy "Admins can read all orders"
   on public.orders for select
   using (
     auth.uid() = user_id
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or public.is_admin()
   );
 
 -- Admin can update any order status
 drop policy if exists "Admins can update all orders" on public.orders;
 create policy "Admins can update all orders"
   on public.orders for update
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
-  );
+  using (public.is_admin());
 
 -- Admin can read ALL profiles (for customer listing)
 drop policy if exists "Admins can read all profiles" on public.profiles;
@@ -149,7 +152,7 @@ create policy "Admins can read all profiles"
   on public.profiles for select
   using (
     auth.uid() = id
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or public.is_admin()
   );
 
 -- Drop the old user-only orders select policy so the new combined one takes effect
