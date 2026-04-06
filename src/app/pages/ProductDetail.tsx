@@ -7,7 +7,7 @@ import { Footer } from '../components/Footer';
 import { useProduct } from '../hooks/useProducts';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { addToCart } from '../lib/cart';
+import { useCartStore } from '../store/cartStore';
 import { useWishlistStore } from '../store/wishlistStore';
 import { useChatStore } from '../store/chatStore';
 
@@ -37,6 +37,7 @@ export default function ProductDetail() {
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'shipping'>('description');
   const openChat = useChatStore((s) => s.openChat);
   const wishlistStore = useWishlistStore();
+  const cartStore = useCartStore();
 
   useEffect(() => {
     setSelectedImage(0);
@@ -193,7 +194,7 @@ export default function ProductDetail() {
                   type="button"
                   onClick={async () => {
                     try {
-                      await addToCart(product.id, quantity);
+                      await cartStore.addItem(product.id, quantity, { name: product.name, price: product.price, image: product.images[0] ?? '' });
                       showSuccessToast('Added to cart', `${quantity} × ${product.name} added to your cart.`);
                     } catch (error) {
                       const message = error instanceof Error ? error.message : 'Unable to add item to cart.';

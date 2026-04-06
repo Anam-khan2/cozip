@@ -7,12 +7,13 @@ import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
 import { useWishlistStore } from '../store/wishlistStore';
-import { addToCart } from '../lib/cart';
+import { useCartStore } from '../store/cartStore';
 import { formatPKR } from '../lib/pricing';
 import { useEffect } from 'react';
 
 export default function Wishlist() {
   const store = useWishlistStore();
+  const cartStore = useCartStore();
   const wishlistItems = store.items;
   const loading = store.isLoading;
 
@@ -30,8 +31,8 @@ export default function Wishlist() {
     }
   };
 
-  const handleAddToCart = (item: { productId: string; name: string }) => {
-    addToCart(item.productId)
+  const handleAddToCart = (item: { productId: string; name: string; price: number; image: string }) => {
+    cartStore.addItem(item.productId, 1, { name: item.name, price: item.price, image: item.image })
       .then(() => showSuccessToast('Added to cart', `${item.name} moved from your wishlist to cart.`))
       .catch((err: unknown) => {
         showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.');

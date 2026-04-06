@@ -8,8 +8,9 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { signOut, useAuthSession } from '../lib/auth';
 import { PageSeo } from '../components/PageSeo';
 import { getUserOrdersFromSupabase, type TrackedOrder } from '../lib/orderTracking';
-import { useWishlist, removeFromWishlist } from '../lib/wishlist';
-import { addToCart } from '../lib/cart';
+import { useWishlist } from '../lib/wishlist';
+import { useWishlistStore } from '../store/wishlistStore';
+import { useCartStore } from '../store/cartStore';
 import type { DashboardView, DashboardOrder, OrderStatus } from '../types';
 import { Skeleton } from '../components/ui/skeleton';
 
@@ -39,6 +40,8 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const { items: wishlistItems, loading: wishlistLoading } = useWishlist();
+  const cartStore = useCartStore();
+  const wishlistStore = useWishlistStore();
 
   useEffect(() => {
     async function loadOrders() {
@@ -806,8 +809,8 @@ export default function Dashboard() {
                         </Link>
                         <p className="text-lg mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>{formatPKR(item.price)}</p>
                         <div className="flex gap-2">
-                          <button onClick={() => { addToCart(item.productId).then(() => showSuccessToast('Added to cart', item.name)).catch((err: unknown) => showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.')); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
-                          <button onClick={() => removeFromWishlist(item.id).catch((err: unknown) => showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.'))} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>
+                          <button onClick={() => { cartStore.addItem(item.productId, 1, { name: item.name, price: item.price, image: item.image }).then(() => showSuccessToast('Added to cart', item.name)).catch((err: unknown) => showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.')); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
+                          <button onClick={() => wishlistStore.removeItem(item.id).catch((err: unknown) => showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.'))} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>
                         </div>
                       </div>
                     </div>

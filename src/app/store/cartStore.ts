@@ -10,6 +10,12 @@ import {
 } from '../lib/cart';
 import type { CartItem } from '../types';
 
+interface ProductInfo {
+  name: string;
+  price: number;
+  image: string;
+}
+
 interface CartState {
   items: CartItem[];
   isLoading: boolean;
@@ -21,7 +27,7 @@ interface CartState {
 
   // Actions
   loadCart: () => Promise<void>;
-  addItem: (productId: string, quantity?: number) => Promise<void>;
+  addItem: (productId: string, quantity?: number, product?: ProductInfo) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, qty: number) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -52,19 +58,58 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
   },
 
-  addItem: async (productId, quantity = 1) => {
-    await addToCart(productId, quantity);
-    await get().loadCart();
+  addItem: async (productId, quantity = 1, product) => {
+    // Optimistic update for instant UI feedback
+    const prev = get().items;
+    if (product) {
+      const existing = prev.find((i) => i.productId === productId);
+      if (existing) {
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i,
+          ),
+        }));
+      } else {
+        set((state) => ({
+          items: [
+            ...state.items,
+            { id: `opt-${productId}`, productId, name: product.name, price: product.price, image: product.image, quantity },
+          ],
+        }));
+      }
+    }
+    try {
+      await addToCart(productId, quantity);
+      await get().loadCart(); // sync real row ID quietly in background
+    } catch (error) {
+      set({ items: prev });
+      throw error;
+    }
   },
 
   removeItem: async (itemId) => {
-    await removeFromCart(itemId);
-    await get().loadCart();
+    const prev = get().items;
+    set((state) => ({ items: state.items.filter((i) => i.id !== itemId) }));
+    try {
+      await removeFromCart(itemId);
+    } catch (error) {
+      set({ items: prev });
+      throw error;
+    }
   },
 
   updateQuantity: async (itemId, qty) => {
-    await updateCartQuantity(itemId, qty);
-    await get().loadCart();
+    if (qty < 1) return;
+    const prev = get().items;
+    set((state) => ({
+      items: state.items.map((i) => (i.id === itemId ? { ...i, quantity: qty } : i)),
+    }));
+    try {
+      await updateCartQuantity(itemId, qty);
+    } catch (error) {
+      set({ items: prev });
+      throw error;
+    }
   },
 
   clearCart: async () => {
