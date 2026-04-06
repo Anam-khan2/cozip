@@ -132,11 +132,14 @@ function buildSpecifications(product: ProductRow) {
   };
 
   return Object.fromEntries(
-    Object.entries(specifications).filter(([, value]) => Boolean(value && value.trim().length > 0))
+    Object.entries(specifications).filter((entry): entry is [string, string] =>
+      typeof entry[1] === 'string' && entry[1].trim().length > 0
+    )
   );
 }
 
-function mapProductRow(product: ProductRow): ProductDetailData {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapProductRow(product: any): ProductDetailData {
   const price = toNumber(product.price);
   const images = sanitizeImages(product.images);
   const reviews = parseReviews(product.reviews);
