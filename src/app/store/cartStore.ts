@@ -14,6 +14,7 @@ interface ProductInfo {
   name: string;
   price: number;
   image: string;
+  stock?: number;
 }
 
 interface CartState {
@@ -62,18 +63,20 @@ export const useCartStore = create<CartState>((set, get) => ({
     // Optimistic update for instant UI feedback
     const prev = get().items;
     if (product) {
+      const stock = product.stock ?? 9999;
       const existing = prev.find((i) => i.productId === productId);
       if (existing) {
+        const newQty = Math.min(existing.quantity + quantity, stock);
         set((state) => ({
           items: state.items.map((i) =>
-            i.productId === productId ? { ...i, quantity: i.quantity + quantity } : i,
+            i.productId === productId ? { ...i, quantity: newQty } : i,
           ),
         }));
       } else {
         set((state) => ({
           items: [
             ...state.items,
-            { id: `opt-${productId}`, productId, name: product.name, price: product.price, image: product.image, quantity },
+            { id: `opt-${productId}`, productId, name: product.name, price: product.price, image: product.image, quantity: Math.min(quantity, stock), stock },
           ],
         }));
       }

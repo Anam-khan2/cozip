@@ -23,6 +23,7 @@ function mapRow(row: CartRow, product: ProductLookupRow | undefined): CartItem {
     price: Number(product?.price ?? 0),
     quantity: row.quantity,
     image: images[0] ?? '',
+    stock: product?.stock ?? 9999,
   };
 }
 
@@ -49,7 +50,7 @@ export async function fetchCartItems(): Promise<CartItem[]> {
   const productIds = Array.from(new Set(cartRows.map((row) => row.product_id)));
   const { data: productData, error: productError } = await supabase
     .from('products')
-    .select('id, name, price, images')
+    .select('id, name, price, images, stock')
     .in('id', productIds);
 
   if (productError) handleSupabaseError(productError, 'Failed to load cart products');

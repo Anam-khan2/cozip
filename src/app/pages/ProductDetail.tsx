@@ -92,7 +92,7 @@ export default function ProductDetail() {
   };
 
   const handleQuantityIncrease = () => {
-    setQuantity(quantity + 1);
+    if (quantity < product.stock) setQuantity(quantity + 1);
   };
 
   return (
@@ -182,8 +182,8 @@ export default function ProductDetail() {
                       <button type="button" onClick={handleQuantityDecrease} className="px-5 py-3 transition-colors" style={{ backgroundColor: quantity === 1 ? 'transparent' : '#FAF8F3', color: '#7A9070' }} aria-label="Decrease quantity" disabled={quantity === 1}>
                         <Minus className="h-5 w-5" aria-hidden="true" />
                       </button>
-                      <input type="number" id="quantity" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number.parseInt(event.target.value, 10) || 1))} className="w-16 text-center outline-none" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600, fontSize: '1.1rem' }} min="1" inputMode="numeric" aria-label="Product quantity" />
-                      <button type="button" onClick={handleQuantityIncrease} className="px-5 py-3 transition-colors" style={{ backgroundColor: '#FAF8F3', color: '#7A9070' }} aria-label="Increase quantity">
+                      <input type="number" id="quantity" value={quantity} onChange={(event) => setQuantity(Math.min(product.stock, Math.max(1, Number.parseInt(event.target.value, 10) || 1)))} className="w-16 text-center outline-none" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600, fontSize: '1.1rem' }} min="1" max={product.stock} inputMode="numeric" aria-label="Product quantity" />
+                      <button type="button" onClick={handleQuantityIncrease} className="px-5 py-3 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: quantity >= product.stock ? 'transparent' : '#FAF8F3', color: '#7A9070' }} aria-label="Increase quantity" disabled={quantity >= product.stock}>
                         <Plus className="h-5 w-5" aria-hidden="true" />
                       </button>
                     </div>
@@ -194,7 +194,7 @@ export default function ProductDetail() {
                   type="button"
                   onClick={async () => {
                     try {
-                      await cartStore.addItem(product.id, quantity, { name: product.name, price: product.price, image: product.images[0] ?? '' });
+                      await cartStore.addItem(product.id, quantity, { name: product.name, price: product.price, image: product.images[0] ?? '', stock: product.stock });
                       showSuccessToast('Added to cart', `${quantity} × ${product.name} added to your cart.`);
                     } catch (error) {
                       const message = error instanceof Error ? error.message : 'Unable to add item to cart.';

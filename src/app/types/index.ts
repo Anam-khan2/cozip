@@ -142,6 +142,7 @@ export type CartItem = {
   price: number;
   quantity: number;
   image: string;
+  stock: number;
 };
 
 export type CartRow = {
@@ -155,6 +156,7 @@ export type ProductLookupRow = {
   name: string;
   price: number | string;
   images: string[] | null;
+  stock: number | null;
 };
 
 // ─── Wishlist ───────────────────────────────────────────────────────────

@@ -28,9 +28,9 @@ export default function Home() {
     }
   };
 
-  const handleAddToCart = async (productId: string, productName: string, price: number, image: string) => {
+  const handleAddToCart = async (productId: string, productName: string, price: number, image: string, stock: number) => {
     try {
-      await cartStore.addItem(productId, 1, { name: productName, price, image });
+      await cartStore.addItem(productId, 1, { name: productName, price, image, stock });
       showSuccessToast('Added to cart', `${productName} is ready for checkout.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to add item to cart.';
@@ -155,7 +155,7 @@ export default function Home() {
                     </p>
                     <button 
                       type="button"
-                      onClick={() => handleAddToCart(product.id, product.name, product.price, product.image)}
+                      onClick={() => handleAddToCart(product.id, product.name, product.price, product.image, product.stock)}
                       className="w-full py-2.5 md:py-3 rounded-full transition-all hover:scale-105 text-sm md:text-base"
                       style={{ 
                         backgroundColor: '#7A9070',

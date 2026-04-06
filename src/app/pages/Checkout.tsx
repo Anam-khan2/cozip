@@ -95,6 +95,17 @@ export default function Checkout() {
     : 'Checkout - Payment';
 
   const completeOrder = () => {
+    // Stock validation before placing order
+    const stockViolation = cartItems.find((item) => item.quantity > item.stock);
+    if (stockViolation) {
+      showErrorToast(
+        'Stock limit exceeded',
+        `Only ${stockViolation.stock} units of "${stockViolation.name}" are available. Please update your cart.`,
+      );
+      setIsProcessing(false);
+      return;
+    }
+
     try {
       const trackedOrder = createTrackedOrder({
         firstName: addressForm.firstName,

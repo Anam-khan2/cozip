@@ -23,8 +23,12 @@ export default function Cart() {
   // Tax (4% COD) is calculated at checkout depending on payment method
   const total = subtotal + deliveryCharge - appliedDiscount;
 
-  const updateQuantity = (itemId: string, newQuantity: number) => {
+  const updateQuantity = (itemId: string, newQuantity: number, maxStock: number) => {
     if (newQuantity < 1) return;
+    if (newQuantity > maxStock) {
+      showErrorToast('Stock limit reached', `Only ${maxStock} units available for this item.`);
+      return;
+    }
     storeUpdateQty(itemId, newQuantity).catch((err: unknown) => {
       showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to update quantity.');
     });
@@ -151,14 +155,21 @@ export default function Cart() {
                           {/* Qty + line total */}
                           <div className="mt-3 flex items-center justify-between gap-3">
                             <label htmlFor={`quantity-${item.id}`} className="sr-only">Quantity for {item.name}</label>
-                            <div className="inline-flex items-center overflow-hidden rounded-full" style={{ border: '2px solid #D4C4B0', backgroundColor: '#FFFFFF' }} role="group" aria-label={`Quantity selector for ${item.name}`}>
-                              <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="px-2.5 py-1.5 sm:px-3 sm:py-2 transition-colors" style={{ backgroundColor: item.quantity === 1 ? 'transparent' : '#FAF8F3', color: '#7A9070' }} aria-label={`Decrease quantity of ${item.name}`} disabled={item.quantity === 1}>
-                                <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                              </button>
-                              <input type="number" id={`quantity-${item.id}`} value={item.quantity} onChange={(event) => updateQuantity(item.id, Math.max(1, Number.parseInt(event.target.value, 10) || 1))} className="w-8 text-center outline-none sm:w-12" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600, fontSize: '0.875rem' }} min="1" inputMode="numeric" />
-                              <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="px-2.5 py-1.5 sm:px-3 sm:py-2 transition-colors" style={{ backgroundColor: '#FAF8F3', color: '#7A9070' }} aria-label={`Increase quantity of ${item.name}`}>
-                                <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
-                              </button>
+                            <div>
+                              <div className="inline-flex items-center overflow-hidden rounded-full" style={{ border: '2px solid #D4C4B0', backgroundColor: '#FFFFFF' }} role="group" aria-label={`Quantity selector for ${item.name}`}>
+                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.stock)} className="px-2.5 py-1.5 sm:px-3 sm:py-2 transition-colors" style={{ backgroundColor: item.quantity === 1 ? 'transparent' : '#FAF8F3', color: '#7A9070' }} aria-label={`Decrease quantity of ${item.name}`} disabled={item.quantity === 1}>
+                                  <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                                </button>
+                                <input type="number" id={`quantity-${item.id}`} value={item.quantity} onChange={(event) => updateQuantity(item.id, Math.max(1, Number.parseInt(event.target.value, 10) || 1), item.stock)} className="w-8 text-center outline-none sm:w-12" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600, fontSize: '0.875rem' }} min="1" max={item.stock} inputMode="numeric" />
+                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.stock)} className="px-2.5 py-1.5 sm:px-3 sm:py-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: item.quantity >= item.stock ? 'transparent' : '#FAF8F3', color: '#7A9070' }} aria-label={`Increase quantity of ${item.name}`} disabled={item.quantity >= item.stock}>
+                                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+                                </button>
+                              </div>
+                              {item.quantity >= item.stock && (
+                                <p className="mt-1 text-xs" style={{ fontFamily: 'Inter, sans-serif', color: '#E07070' }}>
+                                  Max stock: {item.stock}
+                                </p>
+                              )}
                             </div>
                             <p className="text-base sm:text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>
                               {formatPKR(item.price * item.quantity)}
