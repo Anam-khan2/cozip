@@ -1,18 +1,14 @@
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGroq } from '@ai-sdk/groq';
 
 // Do NOT throw at module load time — a module-level throw causes
 // FUNCTION_INVOCATION_FAILED before any error response can be sent.
 // The missing-key error surfaces naturally when streamText tries to call the API.
-const openrouter = createOpenAI({
-  baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY ?? '',
-  headers: {
-    'HTTP-Referer': 'https://cozip.vercel.app',
-    'X-Title': 'Cozip',
-  },
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY ?? '',
 });
 
-export const MODEL_ID = process.env.OPENROUTER_MODEL ?? 'arcee-ai/trinity-mini:free';
+// llama-3.3-70b-versatile: free, fast on Groq LPU hardware, supports tool calling
+export const MODEL_ID = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
 
 /**
  * Pre-configured LLM instance ready for use with the Vercel AI SDK.
@@ -21,4 +17,4 @@ export const MODEL_ID = process.env.OPENROUTER_MODEL ?? 'arcee-ai/trinity-mini:f
  *   import { llm } from '../lib/openrouter';
  *   const result = await generateText({ model: llm, prompt: '...' });
  */
-export const llm = openrouter(MODEL_ID);
+export const llm = groq(MODEL_ID);
