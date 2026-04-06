@@ -34,6 +34,7 @@ export function Footer() {
                   <li key={`${section.title}-${link.to}-${link.label}`}>
                     <Link 
                       to={link.to}
+                      onClick={() => window.scrollTo({ top: 0, behavior: 'instant' })}
                       className="text-sm transition-opacity hover:opacity-70"
                       style={{ 
                         fontFamily: 'Inter, sans-serif', 

@@ -23,14 +23,12 @@ export const footerNavigationSections = [
       { to: '/shop', label: 'All Products' },
       { to: '/wishlist', label: 'Wishlist' },
       { to: '/cart', label: 'Cart' },
-      { to: '/checkout', label: 'Checkout' },
     ],
   },
   {
     title: 'Support',
     links: [
       { to: '/contact', label: 'Contact Us' },
-      { to: '/faq', label: 'Shipping & Returns' },
       { to: '/faq', label: 'FAQ' },
       { to: '/dashboard', label: 'Track Orders' },
     ],
