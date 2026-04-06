@@ -4,7 +4,11 @@
  *
  * Run both together: `npm run dev:all`
  */
+import { config } from 'dotenv';
+config({ path: '.env.local' });
+
 import http from 'node:http';
+import { Readable } from 'node:stream';
 import { URL } from 'node:url';
 
 const PORT = 3001;
@@ -45,9 +49,22 @@ const server = http.createServer(async (req, res) => {
     const handler = await getHandler(url.pathname);
     const webRes = await handler(webReq);
 
-    res.writeHead(webRes.status, Object.fromEntries(webRes.headers.entries()));
-    const buf = await webRes.arrayBuffer();
-    res.end(Buffer.from(buf));
+    // Strip hop-by-hop headers — forwarding them conflicts with Node's own
+    // chunked transfer encoding and can cause the proxy to buffer all chunks
+    // before flushing, making streaming appear broken.
+    const headers = Object.fromEntries(webRes.headers.entries());
+    delete headers['content-length'];
+    delete headers['transfer-encoding'];
+    delete headers['connection'];
+    res.writeHead(webRes.status, headers);
+
+    // Pipe body stream chunk-by-chunk — Node.js HTTP response auto-uses
+    // chunked transfer encoding and flushes each write immediately.
+    if (webRes.body) {
+      Readable.from(webRes.body as unknown as AsyncIterable<Uint8Array>).pipe(res);
+    } else {
+      res.end();
+    }
   } catch (e) {
     console.error('[dev-api]', e);
     res.writeHead(500, { 'content-type': 'application/json' });
@@ -55,6 +72,26 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`[dev-api] Listening on http://localhost:${PORT}`);
-});
+// Kill whatever is occupying the port, then start listening
+async function start() {
+  try {
+    // Try to kill any leftover process on PORT
+    const { execSync } = await import('node:child_process');
+    const pids = execSync(`lsof -ti:${PORT} 2>/dev/null`, { encoding: 'utf8' }).trim();
+    if (pids) {
+      for (const pid of pids.split('\n')) {
+        try { process.kill(Number(pid), 'SIGKILL'); } catch {}
+      }
+      // Brief wait for OS to release the port
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  } catch {
+    // No process on port — fine
+  }
+
+  server.listen(PORT, () => {
+    console.log(`[dev-api] Listening on http://localhost:${PORT}`);
+  });
+}
+
+start();

@@ -12,7 +12,7 @@ const openrouter = createOpenAI({
   },
 });
 
-export const MODEL_ID = process.env.OPENROUTER_MODEL ?? 'openrouter/auto';
+export const MODEL_ID = process.env.OPENROUTER_MODEL ?? 'arcee-ai/trinity-mini:free';
 
 /**
  * Pre-configured LLM instance ready for use with the Vercel AI SDK.

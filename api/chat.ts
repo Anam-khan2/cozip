@@ -15,8 +15,10 @@ RULES:
 - For cart actions, call modify_cart. Always confirm the action was successful before telling the user.
 - For shipping/returns/refund questions, call answer_faq first.
 - Keep responses concise, friendly, and under 3 sentences unless showing a product list.
-- When showing products, format each as: [Name] — $[Price] ([category])
-- If a user is not logged in (no user_id in context), tell them to log in for cart/order features.`;
+- When showing products, format each as: **Name** — Rs [Price] ([category])
+- If a user is not logged in (no user_id in context), tell them to log in for cart/order features.
+- NEVER wrap your response in XML tags like <response>, <thinking>, or similar. Just write the response directly.
+- Use markdown formatting: **bold** for emphasis, bullet lists for multiple items.`;
 
 // ---------------------------------------------------------------------------
 // CORS headers (for local dev + cross-origin requests)
@@ -66,7 +68,11 @@ export default async function POST(req: Request): Promise<Response> {
       system: systemWithContext,
       messages,
       tools: agentTools,
-      maxSteps: 5,
+      maxSteps: 3,
+      temperature: 0.3, // lower = faster, more deterministic
+      onError: ({ error }) => {
+        console.error('[api/chat] streamText error:', error);
+      },
       onFinish: async ({ steps }) => {
         // Walk every step's tool results looking for CART_UPDATED events
         for (const step of steps) {

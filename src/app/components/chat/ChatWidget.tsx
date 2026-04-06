@@ -1,8 +1,9 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useChat } from 'ai/react';
 import { MessageCircle, X, Trash2, Send, User } from 'lucide-react';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 import { useAuthSession } from '../../lib/auth';
 import { useCartStore } from '../../store/cartStore';
 import { useChatStore } from '../../store/chatStore';
@@ -27,22 +28,153 @@ const QUICK_ACTIONS = [
 ];
 
 // ---------------------------------------------------------------------------
-// Typing indicator
+// Status filler messages shown during latency gaps
 // ---------------------------------------------------------------------------
-function TypingIndicator() {
+const STATUS_FILLERS = [
+  '🔍 Searching...',
+  '💭 Thinking...',
+  '📋 Looking that up...',
+  '🛒 Checking for you...',
+  '✨ Working on it...',
+];
+
+// ---------------------------------------------------------------------------
+// Typing indicator with rotating status text
+// ---------------------------------------------------------------------------
+function TypingIndicator({ status }: { status?: string }) {
   return (
     <div className="flex items-end gap-2 mb-3">
       <span className="text-lg leading-none">🛍️</span>
-      <div className="bg-white border border-[#E8E0D5] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center shadow-sm">
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="w-2 h-2 rounded-full bg-[#7A9070] block"
-            animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
-          />
-        ))}
+      <div className="bg-white border border-[#E8E0D5] rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+        <div className="flex gap-1 items-center">
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-[#7A9070] block"
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
+            />
+          ))}
+          {status && (
+            <motion.span
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-[#7A9070] ml-2 font-medium"
+            >
+              {status}
+            </motion.span>
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Strip internal tags, reasoning, and noise from LLM output
+// ---------------------------------------------------------------------------
+function cleanResponse(text: string): string {
+  return text
+    .replace(/<\/?(?:response|thinking|reasoning|thought|internal|scratchpad)>/gi, '')
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
+// Shared markdown components (defined once, reused everywhere)
+// ---------------------------------------------------------------------------
+const MD_COMPONENTS = {
+  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-1 last:mb-0">{children}</p>,
+  strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-semibold">{children}</strong>,
+  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-1 space-y-0.5">{children}</ul>,
+  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-1 space-y-0.5">{children}</ol>,
+  li: ({ children }: { children?: React.ReactNode }) => <li>{children}</li>,
+  code: ({ children }: { children?: React.ReactNode }) => (
+    <code className="bg-[#E8E0D5]/50 px-1 py-0.5 rounded text-xs">{children}</code>
+  ),
+};
+
+// ---------------------------------------------------------------------------
+// Adaptive-speed typewriter for streaming messages.
+//
+// Key idea: render markdown only on WORD boundaries (every ~4-6 chars) instead
+// of every character. This cuts ReactMarkdown re-renders by ~5x.
+//
+// Speed adapts:  when the cursor is far behind the content (backlog > 20),
+// it speeds up to catch up. When caught up, it slows to ~80 chars/sec to
+// create the illusion of smooth streaming even during LLM pauses.
+// ---------------------------------------------------------------------------
+function StreamingText({ content, active }: { content: string; active: boolean }) {
+  const cleaned = useMemo(() => cleanResponse(content), [content]);
+  const [displayLen, setDisplayLen] = useState(() => (active ? 0 : cleaned.length));
+  const rafRef = useRef<number | null>(null);
+  const lastRef = useRef(0);
+  const contentRef = useRef(cleaned);
+  contentRef.current = cleaned;
+
+  const tick = useCallback((now: number) => {
+    if (!lastRef.current) lastRef.current = now;
+    const elapsed = now - lastRef.current;
+
+    setDisplayLen((cur) => {
+      const total = contentRef.current.length;
+      if (cur >= total) return cur;
+
+      const backlog = total - cur;
+      // Adaptive interval: faster when behind, slower when caught up
+      const interval = backlog > 40 ? 4 : backlog > 15 ? 8 : 12;
+      const chars = Math.floor(elapsed / interval);
+      if (chars <= 0) return cur;
+
+      lastRef.current = now;
+      return Math.min(cur + chars, total);
+    });
+
+    rafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(() => {
+    if (!active) {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      setDisplayLen(contentRef.current.length);
+      return;
+    }
+    if (!rafRef.current) {
+      lastRef.current = 0;
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    return () => {
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+    };
+  }, [active, tick]);
+
+  // Snap to a word boundary to avoid cutting in the middle of **bold** tokens
+  const snapLen = useMemo(() => {
+    if (displayLen >= cleaned.length) return cleaned.length;
+    const slice = cleaned.slice(0, displayLen);
+    const lastSpace = slice.lastIndexOf(' ');
+    return lastSpace > displayLen - 8 ? lastSpace + 1 : displayLen;
+  }, [displayLen, cleaned]);
+
+  const visible = cleaned.slice(0, snapLen);
+
+  return (
+    <div className="chat-markdown">
+      <ReactMarkdown components={MD_COMPONENTS}>{visible}</ReactMarkdown>
+      {active && snapLen < cleaned.length && (
+        <span className="inline-block w-0.5 h-[1em] bg-[#7A9070] align-middle ml-px animate-pulse" />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rendered markdown for completed messages (no typewriter)
+// ---------------------------------------------------------------------------
+function FormattedMessage({ content }: { content: string }) {
+  const cleaned = useMemo(() => cleanResponse(content), [content]);
+  return (
+    <div className="chat-markdown">
+      <ReactMarkdown components={MD_COMPONENTS}>{cleaned}</ReactMarkdown>
     </div>
   );
 }
@@ -109,8 +241,14 @@ export function ChatWidget() {
     return () => { subscription.unsubscribe(); };
   }, []);
 
+  // In local dev, call the API server directly on :3001 to avoid the Vite
+  // proxy adding a buffering hop that collapses streaming chunks into one burst.
+  const chatApi = import.meta.env.DEV
+    ? 'http://localhost:3001/api/chat'
+    : '/api/chat';
+
   const { messages, input, setInput, handleSubmit, append, data, isLoading, setMessages } = useChat({
-    api: '/api/chat',
+    api: chatApi,
     body: {
       userId,
       cartItemIds: cartStore.items.map((i) => i.id),
@@ -160,11 +298,6 @@ export function ChatWidget() {
     if (isOpen) setHasUnread(false);
   }, [isOpen]);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading, confirmRequest]);
-
   // Focus input when panel opens
   useEffect(() => {
     if (isOpen) setTimeout(() => inputRef.current?.focus(), 200);
@@ -198,6 +331,37 @@ export function ChatWidget() {
   }
 
   const showQuickActions = messages.length === 0 && !isLoading;
+
+  // Show typing dots only while waiting for the FIRST token, or when the
+  // last assistant message is empty (tool-call step with no visible text yet).
+  const lastMessage = messages[messages.length - 1];
+  const lastContent = typeof lastMessage?.content === 'string'
+    ? lastMessage.content
+    : '';
+  const isThinking = isLoading && (
+    lastMessage?.role !== 'assistant' || cleanResponse(lastContent).length === 0
+  );
+
+  // Rotate status filler text every 2s during latency gaps
+  const [fillerIdx, setFillerIdx] = useState(0);
+  useEffect(() => {
+    if (!isLoading) { setFillerIdx(0); return; }
+    const t = setInterval(() => setFillerIdx((i) => (i + 1) % STATUS_FILLERS.length), 2000);
+    return () => clearInterval(t);
+  }, [isLoading]);
+
+  // Pre-warm: fire a lightweight OPTIONS request when user opens widget
+  // so the TCP/TLS handshake is already done when the first message sends.
+  useEffect(() => {
+    if (isOpen) {
+      fetch(chatApi, { method: 'OPTIONS' }).catch(() => {});
+    }
+  }, [isOpen, chatApi]);
+
+  // Auto-scroll as tokens stream in (lastContent updates with every new token)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [lastContent, isThinking, confirmRequest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -302,8 +466,19 @@ export function ChatWidget() {
                 )}
 
                 {/* Message list */}
-                {messages.map((message) => {
+                {messages.map((message, index) => {
                   const isUser = message.role === 'user';
+                  const isLastMsg = index === messages.length - 1;
+                  const rawContent = typeof message.content === 'string'
+                    ? message.content
+                    : (message.content as { type: string; text?: string }[])
+                        .filter((p) => p.type === 'text')
+                        .map((p) => p.text)
+                        .join('');
+
+                  // Skip empty assistant messages (tool-only steps with no visible text)
+                  if (!isUser && !rawContent.trim()) return null;
+
                   return (
                     <motion.div
                       key={message.id}
@@ -325,25 +500,25 @@ export function ChatWidget() {
 
                       {/* Bubble */}
                       <div
-                        className={`px-4 py-2.5 rounded-2xl text-sm max-w-[80%] shadow-sm leading-relaxed whitespace-pre-wrap ${
+                        className={`px-4 py-2.5 rounded-2xl text-sm max-w-[80%] shadow-sm leading-relaxed ${
                           isUser
-                            ? 'bg-[#7A9070] text-white rounded-br-sm'
+                            ? 'bg-[#7A9070] text-white rounded-br-sm whitespace-pre-wrap'
                             : 'bg-white border border-[#E8E0D5] text-[#4A5D45] rounded-bl-sm'
                         }`}
                       >
-                        {typeof message.content === 'string'
-                          ? message.content
-                          : (message.content as { type: string; text?: string }[])
-                              .filter((p) => p.type === 'text')
-                              .map((p) => p.text)
-                              .join('')}
+                        {isUser
+                          ? rawContent
+                          : isLoading && isLastMsg
+                            ? <StreamingText content={rawContent} active />
+                            : <FormattedMessage content={rawContent} />
+                        }
                       </div>
                     </motion.div>
                   );
                 })}
 
-                {/* Typing indicator */}
-                {isLoading && <TypingIndicator />}
+                {/* Typing indicator — only while waiting for first token */}
+                {isThinking && <TypingIndicator status={STATUS_FILLERS[fillerIdx]} />}
 
                 <div ref={messagesEndRef} />
               </div>
