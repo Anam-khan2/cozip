@@ -5,12 +5,26 @@ import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { EmptyState } from '../components/EmptyState';
-import { formatOrderNumber, getTrackedOrder, getTrackedOrderFromSupabase } from '../lib/orderTracking';
+import { formatOrderNumber, getTrackedOrder, getTrackedOrderFromSupabase, normalizeOrderNumber } from '../lib/orderTracking';
+import { getSupabaseClient } from '../lib/supabase';
 import { PageSeo } from '../components/PageSeo';
 import { showErrorToast } from '../lib/notifications';
 import { formatPKR } from '../lib/pricing';
 import { Skeleton } from '../components/ui/skeleton';
 import type { TrackedOrder } from '../types';
+
+const STATUS_MESSAGES: Record<string, string> = {
+  Packed: 'Your order is confirmed and currently being packed by the Cozip fulfillment team.',
+  Processing: 'Your order is being processed and will be dispatched shortly.',
+  Shipped: 'Great news! Your order has been shipped and is on its way to you.',
+  'Out for Delivery': 'Your parcel is out for delivery today — keep an eye out for the courier!',
+  Delivered: 'Your order has been delivered. We hope you love your Cozip products!',
+  Cancelled: 'This order has been cancelled. Please contact our support for further assistance.',
+};
+
+function getStatusMessage(status: string, description: string): string {
+  return description || STATUS_MESSAGES[status] || 'Your order is being processed.';
+}
 
 export default function OrderTrackingDetails() {
   const { orderNumber = '' } = useParams();
@@ -19,25 +33,49 @@ export default function OrderTrackingDetails() {
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+    const supabase = getSupabaseClient();
+    const normalized = normalizeOrderNumber(orderNumber);
+
+    // Show localStorage data instantly while Supabase loads
+    const local = getTrackedOrder(orderNumber);
+    if (local) setTrackedOrder(local);
+
+    async function loadFromSupabase() {
       try {
-        // Try localStorage first (instant), then Supabase
-        const local = getTrackedOrder(orderNumber);
-        if (local) {
-          if (!cancelled) { setTrackedOrder(local); setLoading(false); }
-          return;
-        }
         const remote = await getTrackedOrderFromSupabase(orderNumber);
-        if (!cancelled) { setTrackedOrder(remote); setLoading(false); }
+        if (!cancelled) {
+          setTrackedOrder(remote);
+          setLoading(false);
+        }
       } catch (err) {
         if (!cancelled) {
           setLoading(false);
-          showErrorToast('Tracking error', err instanceof Error ? err.message : 'Failed to load order details.');
+          if (!local) {
+            showErrorToast('Tracking error', err instanceof Error ? err.message : 'Failed to load order details.');
+          }
         }
       }
     }
-    void load();
-    return () => { cancelled = true; };
+
+    void loadFromSupabase();
+
+    // Realtime: re-fetch when admin updates this order
+    const channel = supabase
+      .channel(`order-tracking-${normalized}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `order_number=eq.${normalized}`,
+      }, () => {
+        void loadFromSupabase();
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
   }, [orderNumber]);
 
   const pageTitle = trackedOrder ? `Track ${formatOrderNumber(trackedOrder.orderNumber)}` : 'Order Tracking';
@@ -136,25 +174,18 @@ export default function OrderTrackingDetails() {
                           {formatOrderNumber(trackedOrder.orderNumber)}
                         </h1>
                         <p className="text-sm leading-relaxed md:text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-                          {trackedOrder.statusDescription}
+                          {getStatusMessage(trackedOrder.status, trackedOrder.statusDescription)}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="inline-flex items-center rounded-full px-4 py-2 text-sm" style={{ backgroundColor: '#F0F4F0', color: '#5A7050', border: '1px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
                           {trackedOrder.status}
                         </span>
-                        <span className="inline-flex items-center rounded-full px-4 py-2 text-sm" style={{ backgroundColor: '#FFF7F8', color: '#8A5F6B', border: '1px solid #F4D4DC', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
-                          {trackedOrder.shippingMethod.charAt(0).toUpperCase() + trackedOrder.shippingMethod.slice(1)} shipping
-                        </span>
                       </div>
                     </header>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2 md:p-8 xl:grid-cols-4">
-                    <div className="rounded-2xl p-5" style={{ backgroundColor: '#FAF8F3' }}>
-                      <p className="mb-1 text-xs uppercase tracking-[0.16em]" style={{ fontFamily: 'Inter, sans-serif', color: '#B7B09F', fontWeight: 700 }}>Carrier</p>
-                      <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{trackedOrder.carrier}</p>
-                    </div>
+                  <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-3 md:p-8">
                     <div className="rounded-2xl p-5" style={{ backgroundColor: '#FAF8F3' }}>
                       <p className="mb-1 text-xs uppercase tracking-[0.16em]" style={{ fontFamily: 'Inter, sans-serif', color: '#B7B09F', fontWeight: 700 }}>Tracking Code</p>
                       <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{trackedOrder.trackingCode}</p>
