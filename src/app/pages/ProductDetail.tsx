@@ -8,6 +8,7 @@ import { useProduct } from '../hooks/useProducts';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { addToCart } from '../lib/cart';
+import { addToWishlist } from '../lib/wishlist';
 import { useChatStore } from '../store/chatStore';
 
 function formatReviewDate(date: string) {
@@ -218,7 +219,15 @@ export default function ProductDetail() {
 
                 <button
                   type="button"
-                  onClick={() => showInfoToast('Saved for later', `${product.name} was added to your wishlist.`)}
+                  onClick={async () => {
+                    try {
+                      await addToWishlist(product.id);
+                      showSuccessToast('Saved to wishlist', `${product.name} has been added to your wishlist.`);
+                    } catch (error) {
+                      const message = error instanceof Error ? error.message : 'Unable to add to wishlist.';
+                      showErrorToast('Wishlist error', message);
+                    }
+                  }}
                   className="flex w-full items-center justify-center gap-3 rounded-full py-4 transition-all hover:scale-105"
                   style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', boxShadow: '0 4px 16px rgba(122, 144, 112, 0.1)', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
                   aria-label={`Add ${product.name} to wishlist`}
