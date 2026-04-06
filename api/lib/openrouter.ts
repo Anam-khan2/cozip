@@ -1,19 +1,11 @@
 import { createOpenAI } from '@ai-sdk/openai';
 
-if (!process.env.OPENROUTER_API_KEY) {
-  throw new Error('Missing OPENROUTER_API_KEY environment variable.');
-}
-
-/**
- * OpenAI-compatible provider pointed at OpenRouter.
- * Model is configured via OPENROUTER_MODEL env var (default: "openrouter/auto").
- * The free tier uses models with a `:free` suffix on OpenRouter, e.g.
- * "meta-llama/llama-3.1-8b-instruct:free". Setting OPENROUTER_MODEL=openrouter/auto
- * lets OpenRouter pick the best available model automatically.
- */
+// Do NOT throw at module load time — a module-level throw causes
+// FUNCTION_INVOCATION_FAILED before any error response can be sent.
+// The missing-key error surfaces naturally when streamText tries to call the API.
 const openrouter = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY,
+  apiKey: process.env.OPENROUTER_API_KEY ?? '',
   headers: {
     'HTTP-Referer': 'https://cozip.vercel.app',
     'X-Title': 'Cozip',

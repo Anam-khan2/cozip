@@ -37,22 +37,25 @@ export const agentTools = {
       try {
         const embedding = await generateEmbedding(query);
 
-        const { data, error } = await supabaseAdmin.rpc('search_products_by_vector', {
-          query_vector: JSON.stringify(embedding),
-          similarity_threshold: 0.25,
-          result_limit: limit,
-          filter_category: filters?.category ?? null,
-          filter_min_price: filters?.min_price ?? null,
-          filter_max_price: filters?.max_price ?? null,
-          filter_in_stock: filters?.in_stock ?? null,
-        });
+        // Only attempt vector search when embeddings are available (local dev)
+        if (embedding !== null) {
+          const { data, error } = await supabaseAdmin.rpc('search_products_by_vector', {
+            query_vector: JSON.stringify(embedding),
+            similarity_threshold: 0.25,
+            result_limit: limit,
+            filter_category: filters?.category ?? null,
+            filter_min_price: filters?.min_price ?? null,
+            filter_max_price: filters?.max_price ?? null,
+            filter_in_stock: filters?.in_stock ?? null,
+          });
 
-        if (!error && data && data.length > 0) {
-          return { products: data, count: data.length };
+          if (!error && data && data.length > 0) {
+            return { products: data, count: data.length };
+          }
         }
 
-        // Fallback: text-based search when no embeddings match
-        console.warn('[search_products] Vector search returned no results, using fallback.');
+        // Fallback: text-based search (always used on Vercel; also used when vector returns nothing)
+        console.warn('[search_products] Using keyword fallback.');
         const { data: fallbackData } = await supabaseAdmin
           .from('products')
           .select('id,name,price,category,stock,images,is_featured')
