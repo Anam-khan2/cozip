@@ -1,13 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getSupabaseClient } from './supabase';
+import type { WishlistItem } from '../types';
 
-export interface WishlistItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  image: string;
-}
+export type { WishlistItem };
 
 export function useWishlist() {
   const [items, setItems] = useState<WishlistItem[]>([]);

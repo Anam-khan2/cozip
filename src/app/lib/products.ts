@@ -1,98 +1,17 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { getSupabaseClient } from './supabase';
+import { handleSupabaseError } from './errors';
+import type {
+  ProductReviewRow,
+  ProductRow,
+  ProductMutationInput,
+  ProductUpdateInput,
+  ProductCard,
+  ProductReview,
+  ProductDetailData,
+} from '../types';
 
-type ProductReviewRow = {
-  name?: string;
-  rating?: number | string;
-  comment?: string;
-  created_at?: string;
-  date?: string;
-};
-
-type ProductRow = {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number | string;
-  stock: number | null;
-  category: string | null;
-  rating: number | string | null;
-  images: string[] | null;
-  is_featured: boolean | null;
-  material: string | null;
-  capacity: string | null;
-  dimensions: string | null;
-  weight: string | null;
-  care: string | null;
-  shipping_info: string | null;
-  slug: string | null;
-  meta_title: string | null;
-  meta_description: string | null;
-  meta_keywords: string | null;
-  reviews: ProductReviewRow[] | string | null;
-  created_at: string | null;
-};
-
-export type ProductMutationInput = {
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category?: string;
-  images: string[];
-  isFeatured?: boolean;
-  material?: string;
-  capacity?: string;
-  dimensions?: string;
-  weight?: string;
-  care?: string;
-  shippingInfo?: string;
-  slug?: string;
-  metaTitle?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
-  rating?: number;
-};
-
-type ProductUpdateInput = Partial<ProductMutationInput> & {
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  images: string[];
-};
-
-export type ProductCard = {
-  id: string;
-  name: string;
-  price: number;
-  formattedPrice: string;
-  image: string;
-  category: string | null;
-  stock: number;
-  isFeatured: boolean;
-};
-
-export type ProductReview = {
-  name: string;
-  rating: number;
-  comment: string;
-  date: string;
-};
-
-export type ProductDetailData = ProductCard & {
-  description: string;
-  rating: number;
-  reviewCount: number;
-  images: string[];
-  specifications: Record<string, string>;
-  shipping: string;
-  slug: string;
-  metaTitle: string;
-  metaDescription: string;
-  metaKeywords: string;
-  reviews: ProductReview[];
-};
+export type { ProductMutationInput, ProductCard, ProductReview, ProductDetailData };
 
 const PRODUCT_SELECT = `
   id,
@@ -254,7 +173,7 @@ export async function getProducts() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to load products');
   }
 
   return (data ?? []).map(mapProductRow);
@@ -270,7 +189,7 @@ export async function getFeaturedProducts(limit = 5) {
     .limit(limit);
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to load featured products');
   }
 
   if ((data ?? []).length > 0) {
@@ -312,7 +231,7 @@ export async function uploadProductImages(files: File[]) {
       });
 
       if (error) {
-        throw error;
+        handleSupabaseError(error, 'Failed to upload image');
       }
 
       const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
@@ -336,7 +255,7 @@ export async function deleteProductImages(imageUrls: string[]) {
   const { error } = await supabase.storage.from(STORAGE_BUCKET).remove(storagePaths);
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to delete product images');
   }
 }
 
@@ -436,7 +355,7 @@ export async function createProduct(input: ProductMutationInput) {
     .single();
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to create product');
   }
 
   return mapProductRow(data);
@@ -452,7 +371,7 @@ export async function updateProduct(productId: string, input: ProductUpdateInput
     .single();
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to update product');
   }
 
   return mapProductRow(data);
@@ -468,7 +387,7 @@ export async function deleteProductById(productId: string) {
     .single();
 
   if (productError) {
-    throw productError;
+    handleSupabaseError(productError, 'Failed to find product for deletion');
   }
 
   await deleteProductImages(sanitizeImages(product.images));
@@ -476,7 +395,7 @@ export async function deleteProductById(productId: string) {
   const { error } = await supabase.from('products').delete().eq('id', productId);
 
   if (error) {
-    throw error;
+    handleSupabaseError(error, 'Failed to delete product');
   }
 }
 

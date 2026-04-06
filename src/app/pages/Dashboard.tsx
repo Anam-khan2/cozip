@@ -1,30 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Loader2, Menu, X } from 'lucide-react';
+import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Menu, X } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
-import { showSuccessToast } from '../lib/notifications';
+import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { signOut, useAuthSession } from '../lib/auth';
 import { PageSeo } from '../components/PageSeo';
 import { getUserOrdersFromSupabase, type TrackedOrder } from '../lib/orderTracking';
 import { useWishlist, removeFromWishlist } from '../lib/wishlist';
 import { addToCart } from '../lib/cart';
+import type { DashboardView, DashboardOrder, OrderStatus } from '../types';
+import { Skeleton } from '../components/ui/skeleton';
 
-// Dashboard view type
-type DashboardView = 'overview' | 'orders' | 'wishlist' | 'settings';
-
-// Order type mapped from tracked orders
-interface Order {
-  id: string;
-  orderNumber: string;
-  date: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  total: number;
-  items: number;
-}
-
-function mapTrackedToOrder(tracked: TrackedOrder): Order {
-  const statusMap: Record<string, Order['status']> = {
+function mapTrackedToOrder(tracked: TrackedOrder): DashboardOrder {
+  const statusMap: Record<string, OrderStatus> = {
     'Confirmed': 'Processing',
     'Packed': 'Processing',
     'In Transit': 'Shipped',
@@ -46,7 +35,7 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState<DashboardView>('orders');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const authSession = useAuthSession();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const { items: wishlistItems, loading: wishlistLoading } = useWishlist();
 
@@ -55,8 +44,9 @@ export default function Dashboard() {
       try {
         const tracked = await getUserOrdersFromSupabase();
         setOrders(tracked.map(mapTrackedToOrder));
-      } catch {
+      } catch (err) {
         setOrders([]);
+        showErrorToast('Orders', err instanceof Error ? err.message : 'Failed to load your orders.');
       } finally {
         setOrdersLoading(false);
       }
@@ -66,14 +56,8 @@ export default function Dashboard() {
     }
   }, [authSession]);
 
-  useEffect(() => {
-    if (authSession === null) {
-      navigate('/login');
-    }
-  }, [authSession, navigate]);
-
   // Get status badge color
-  const getStatusColor = (status: Order['status']) => {
+  const getStatusColor = (status: DashboardOrder['status']) => {
     switch (status) {
       case 'Delivered':
         return { bg: '#E8F5E9', text: '#4A5D45', border: '#C8E6C9' }; // Light green
@@ -95,19 +79,8 @@ export default function Dashboard() {
     navigate('/');
   };
 
-  if (authSession === undefined) {
-    return (
-      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
-          Loading your dashboard…
-        </p>
-      </div>
-    );
-  }
-
-  if (!authSession?.isAuthenticated) {
-    return null;
-  }
+  // AuthGuard handles redirect; this just satisfies TS narrowing while the hook resolves
+  if (!authSession?.isAuthenticated) return null;
 
   const initials = `${authSession.firstName?.[0] ?? 'C'}${authSession.lastName?.[0] ?? ''}`.toUpperCase();
   const fullName = [authSession.firstName, authSession.lastName].filter(Boolean).join(' ');
@@ -382,7 +355,15 @@ export default function Dashboard() {
                   </thead>
                   <tbody>
                     {ordersLoading ? (
-                      <tr><td colSpan={5} className="px-8 py-12 text-center" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Loading orders…</td></tr>
+                      [1, 2, 3, 4].map((n) => (
+                        <tr key={n} style={{ borderBottom: '1px solid #D4C4B0' }}>
+                          <td className="px-8 py-6"><Skeleton className="h-5 w-24 rounded-full" style={{ backgroundColor: '#EEF2EE' }} /></td>
+                          <td className="px-8 py-6"><Skeleton className="h-5 w-28 rounded-full" style={{ backgroundColor: '#EEF2EE' }} /></td>
+                          <td className="px-8 py-6"><Skeleton className="h-7 w-20 rounded-full" style={{ backgroundColor: '#F0F4F0' }} /></td>
+                          <td className="px-8 py-6"><Skeleton className="h-5 w-16 rounded-full" style={{ backgroundColor: '#F7E7EB' }} /></td>
+                          <td className="px-8 py-6"><Skeleton className="h-5 w-10 rounded-full" style={{ backgroundColor: '#EEF2EE' }} /></td>
+                        </tr>
+                      ))
                     ) : orders.map((order, index) => {
                       const statusColors = getStatusColor(order.status);
                       return (
@@ -791,9 +772,17 @@ export default function Dashboard() {
                 </p>
               </header>
               {wishlistLoading ? (
-                <div className="rounded-3xl p-16 text-center" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: '#7A9070' }} />
-                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Loading wishlist…</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="flex gap-4 p-4 rounded-2xl" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
+                      <Skeleton className="h-20 w-20 flex-shrink-0 rounded-xl" style={{ backgroundColor: '#EEF2EE' }} />
+                      <div className="flex-1 space-y-2 py-1">
+                        <Skeleton className="h-4 w-3/4 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                        <Skeleton className="h-4 w-1/3 rounded-full" style={{ backgroundColor: '#F7E7EB' }} />
+                        <Skeleton className="h-8 w-24 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : wishlistItems.length === 0 ? (
                 <div className="rounded-3xl p-16 text-center" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0' }}>
@@ -816,8 +805,8 @@ export default function Dashboard() {
                         </Link>
                         <p className="text-lg mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${item.price.toFixed(2)}</p>
                         <div className="flex gap-2">
-                          <button onClick={() => { void addToCart(item.productId); showSuccessToast('Added to cart', item.name); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
-                          <button onClick={() => void removeFromWishlist(item.id)} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>
+                          <button onClick={() => { addToCart(item.productId).then(() => showSuccessToast('Added to cart', item.name)).catch((err: unknown) => showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.')); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
+                          <button onClick={() => removeFromWishlist(item.id).catch((err: unknown) => showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.'))} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>
                         </div>
                       </div>
                     </div>

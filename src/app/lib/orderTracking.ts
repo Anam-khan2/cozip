@@ -1,67 +1,14 @@
 import { getSupabaseClient } from './supabase';
+import { handleSupabaseError } from './errors';
+import type {
+  ShippingMethod,
+  TrackedOrderItem,
+  TrackingEvent,
+  TrackedOrder,
+  CreateTrackedOrderInput,
+} from '../types';
 
-type ShippingMethod = 'free' | 'standard' | 'express';
-
-export type TrackedOrderItem = {
-  id: number;
-  productId: number;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-};
-
-export type TrackingEvent = {
-  id: string;
-  label: string;
-  description: string;
-  location: string;
-  timestamp: string;
-  completed: boolean;
-};
-
-export type TrackedOrder = {
-  orderNumber: string;
-  customerName: string;
-  email: string;
-  phone: string;
-  shippingAddressLine: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  shippingMethod: ShippingMethod;
-  status: 'Confirmed' | 'Packed' | 'In Transit' | 'Out for Delivery' | 'Delivered';
-  statusDescription: string;
-  carrier: string;
-  trackingCode: string;
-  originCity: string;
-  destinationCity: string;
-  estimatedDelivery: string;
-  orderPlacedAt: string;
-  items: TrackedOrderItem[];
-  subtotal: number;
-  shippingCost: number;
-  tax: number;
-  total: number;
-  timeline: TrackingEvent[];
-};
-
-type CreateTrackedOrderInput = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  shippingMethod: ShippingMethod;
-  items: TrackedOrderItem[];
-  subtotal: number;
-  shippingCost: number;
-  tax: number;
-  total: number;
-};
+export type { TrackedOrderItem, TrackingEvent, TrackedOrder, CreateTrackedOrderInput };
 
 const STORAGE_KEY = 'snugsip-guest-orders';
 
@@ -134,39 +81,33 @@ export function getTrackedOrder(orderNumber: string) {
 }
 
 export async function getTrackedOrderFromSupabase(orderNumber: string): Promise<TrackedOrder | null> {
-  try {
-    const supabase = getSupabaseClient();
-    const normalized = normalizeOrderNumber(orderNumber);
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('order_number', normalized)
-      .maybeSingle();
+  const supabase = getSupabaseClient();
+  const normalized = normalizeOrderNumber(orderNumber);
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_number', normalized)
+    .maybeSingle();
 
-    if (!data) return null;
-    return mapRowToTrackedOrder(data);
-  } catch {
-    return null;
-  }
+  if (error) handleSupabaseError(error, 'Failed to load order details');
+  if (!data) return null;
+  return mapRowToTrackedOrder(data);
 }
 
 export async function getUserOrdersFromSupabase(): Promise<TrackedOrder[]> {
-  try {
-    const supabase = getSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+  const supabase = getSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
 
-    const { data } = await supabase
-      .from('orders')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
 
-    return (data ?? []).map(mapRowToTrackedOrder);
-  } catch {
-    return [];
-  }
+  if (error) handleSupabaseError(error, 'Failed to load your orders');
+  return (data ?? []).map(mapRowToTrackedOrder);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -221,7 +162,7 @@ async function saveOrderToSupabase(order: TrackedOrder) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase.from('orders').upsert(
+    const { error } = await supabase.from('orders').upsert(
       {
         order_number: order.orderNumber,
         user_id: user.id,
@@ -250,8 +191,10 @@ async function saveOrderToSupabase(order: TrackedOrder) {
       },
       { onConflict: 'order_number' }
     );
-  } catch {
+    if (error) console.error('[saveOrderToSupabase]', error);
+  } catch (err) {
     // Supabase persistence is best-effort; localStorage is the fallback
+    console.error('[saveOrderToSupabase]', err);
   }
 }
 

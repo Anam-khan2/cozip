@@ -3,7 +3,7 @@ import { Heart, ShoppingCart, X, Loader2 } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { EmptyState } from '../components/EmptyState';
-import { showSuccessToast } from '../lib/notifications';
+import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
 import { useWishlist, removeFromWishlist } from '../lib/wishlist';
@@ -13,12 +13,17 @@ export default function Wishlist() {
   const { items: wishlistItems, loading } = useWishlist();
 
   const handleRemoveItem = (itemId: string) => {
-    void removeFromWishlist(itemId);
+    removeFromWishlist(itemId).catch((err: unknown) => {
+      showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.');
+    });
   };
 
   const handleAddToCart = (item: { productId: string; name: string }) => {
-    void addToCart(item.productId);
-    showSuccessToast('Added to cart', `${item.name} moved from your wishlist to cart.`);
+    addToCart(item.productId)
+      .then(() => showSuccessToast('Added to cart', `${item.name} moved from your wishlist to cart.`))
+      .catch((err: unknown) => {
+        showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.');
+      });
   };
 
   return (

@@ -1,16 +1,7 @@
 import { getSupabaseClient } from './supabase';
+import type { Coupon, CouponStatus } from '../types';
 
-export interface Coupon {
-  id: string;
-  code: string;
-  discountType: 'percent' | 'fixed';
-  discountValue: number;
-  usageLimit: number;
-  usedCount: number;
-  status: 'Active' | 'Expired';
-  expiresAt: string | null;
-  createdAt: string;
-}
+export type { Coupon, CouponStatus };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: any): Coupon {
@@ -69,7 +60,7 @@ export async function createCoupon(input: {
   discountType: 'percent' | 'fixed';
   discountValue: number;
   usageLimit: number;
-  status: 'Active' | 'Expired';
+  status: CouponStatus;
 }) {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from('coupons').insert({
@@ -90,7 +81,7 @@ export async function deleteCoupon(couponId: string) {
   if (error) throw error;
 }
 
-export async function updateCouponStatus(couponId: string, status: 'Active' | 'Expired') {
+export async function updateCouponStatus(couponId: string, status: CouponStatus) {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from('coupons').update({ status }).eq('id', couponId);
   if (error) throw error;

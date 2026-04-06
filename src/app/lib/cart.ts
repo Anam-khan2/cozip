@@ -1,30 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useEffect, useCallback } from 'react';
 import { getSupabaseClient } from './supabase';
+import { handleSupabaseError } from './errors';
+import type { CartItem, CartRow, ProductLookupRow } from '../types';
+import { useCartStore } from '../store/cartStore';
 
-// ─── Types ──────────────────────────────────────────────────────────────
-
-export interface CartItem {
-  id: string;
-  productId: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-}
-
-interface CartRow {
-  id: string;
-  product_id: string;
-  quantity: number;
-}
-
-interface ProductLookupRow {
-  id: string;
-  name: string;
-  price: number | string;
-  images: string[] | null;
-}
+export type { CartItem };
 
 // ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -58,7 +38,7 @@ export async function fetchCartItems(): Promise<CartItem[]> {
     .select('id, product_id, quantity')
     .eq('user_id', userId);
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to load cart');
 
   const cartRows = (data as CartRow[]) ?? [];
 
@@ -72,7 +52,7 @@ export async function fetchCartItems(): Promise<CartItem[]> {
     .select('id, name, price, images')
     .in('id', productIds);
 
-  if (productError) throw productError;
+  if (productError) handleSupabaseError(productError, 'Failed to load cart products');
 
   const productsById = new Map(
     ((productData as ProductLookupRow[] | null) ?? []).map((product) => [product.id, product])
@@ -100,12 +80,12 @@ export async function addToCart(productId: string, quantity = 1): Promise<void> 
       .from('cart_items')
       .update({ quantity: existing.quantity + quantity })
       .eq('id', existing.id);
-    if (error) throw error;
+    if (error) handleSupabaseError(error, 'Failed to update cart item quantity');
   } else {
     const { error } = await supabase
       .from('cart_items')
       .insert({ user_id: userId, product_id: productId, quantity });
-    if (error) throw error;
+    if (error) handleSupabaseError(error, 'Failed to add item to cart');
   }
 }
 
@@ -116,7 +96,7 @@ export async function updateCartQuantity(cartItemId: string, quantity: number): 
     .from('cart_items')
     .update({ quantity })
     .eq('id', cartItemId);
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to update cart quantity');
 }
 
 export async function removeFromCart(cartItemId: string): Promise<void> {
@@ -125,7 +105,7 @@ export async function removeFromCart(cartItemId: string): Promise<void> {
     .from('cart_items')
     .delete()
     .eq('id', cartItemId);
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to remove cart item');
 }
 
 export async function clearCart(): Promise<void> {
@@ -136,63 +116,27 @@ export async function clearCart(): Promise<void> {
     .from('cart_items')
     .delete()
     .eq('user_id', userId);
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to clear cart');
 }
 
-// ─── Real-time hook ─────────────────────────────────────────────────────
-
 export function useCart() {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const store = useCartStore();
 
-  const refresh = useCallback(async () => {
-    try {
-      const fetched = await fetchCartItems();
-      setItems(fetched);
-    } catch {
-      // Silently handle — user may not be authenticated
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const refresh = useCallback(() => store.loadCart(), [store]);
 
   useEffect(() => {
-    void refresh();
-
-    // Subscribe to real-time changes on the cart_items table
-    const supabase = getSupabaseClient();
-    let channel: RealtimeChannel | null = null;
-
-    (async () => {
-      const userId = await getCurrentUserId();
-      if (!userId) return;
-
-      channel = supabase
-        .channel('cart-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'cart_items',
-            filter: `user_id=eq.${userId}`,
-          },
-          () => {
-            void refresh();
-          },
-        )
-        .subscribe();
-    })();
-
+    void store.loadCart();
+    store.initRealtime();
     return () => {
-      if (channel) {
-        void getSupabaseClient().removeChannel(channel);
-      }
+      store.disposeRealtime();
     };
-  }, [refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const count = items.reduce((sum, item) => sum + item.quantity, 0);
-
-  return { items, count, loading, refresh };
+  return {
+    items: store.items,
+    count: store.itemCount(),
+    loading: store.isLoading,
+    refresh,
+  };
 }

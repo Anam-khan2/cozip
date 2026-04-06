@@ -56,11 +56,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/dashboard',
-    element: <Dashboard />,
+    element: <AuthGuard><Dashboard /></AuthGuard>,
   },
   {
     path: '/wishlist',
-    element: <Wishlist />,
+    element: <AuthGuard><Wishlist /></AuthGuard>,
   },
   {
     path: '/contact',

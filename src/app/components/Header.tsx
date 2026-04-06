@@ -1,13 +1,35 @@
 import { Link, useLocation } from 'react-router';
 import { ShoppingCart, User, Menu, X, Heart } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BrandLogo } from './BrandLogo';
 import { isNavigationLinkActive, mainNavigationLinks } from '../lib/navigation';
 import { useAuthSession } from '../lib/auth';
-import { useCart } from '../lib/cart';
+import { useCartStore } from '../store/cartStore';
 
 export function Header() {
-  const { count: cartCount } = useCart();
+  const store = useCartStore();
+  const cartCount = store.itemCount();
+
+  // Pulse the badge briefly whenever the count increases
+  const prevCountRef = useRef(cartCount);
+  const [isPulsing, setIsPulsing] = useState(false);
+  useEffect(() => {
+    if (cartCount > prevCountRef.current) {
+      setIsPulsing(true);
+      const t = setTimeout(() => setIsPulsing(false), 300);
+      prevCountRef.current = cartCount;
+      return () => clearTimeout(t);
+    }
+    prevCountRef.current = cartCount;
+  }, [cartCount]);
+
+  useEffect(() => {
+    void store.loadCart();
+    store.initRealtime();
+    return () => { store.disposeRealtime(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const wishlistCount = 4;
@@ -142,7 +164,7 @@ export function Header() {
               <ShoppingCart size={20} style={{ color: '#5A7050' }} />
               {cartCount > 0 && (
                 <span 
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                  className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all duration-200 ${isPulsing ? 'scale-125' : 'scale-100'}`}
                   style={{ 
                     backgroundColor: '#F4A6B2',
                     color: '#FFFFFF',

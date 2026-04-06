@@ -7,7 +7,7 @@ import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { createTrackedOrder, saveTrackedOrder } from '../lib/orderTracking';
-import { useCart, clearCart } from '../lib/cart';
+import { useCartStore } from '../store/cartStore';
 import { PageSeo } from '../components/PageSeo';
 
 // Stripe test/sandbox publishable key
@@ -69,7 +69,7 @@ function StripeCardForm({ total, isProcessing, onSubmit, onBack }: { total: numb
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { items: cartItems, loading: cartLoading } = useCart();
+  const { items: cartItems, isLoading: cartLoading, clearCart: storeClearCart } = useCartStore();
   const [currentStep, setCurrentStep] = useState<CheckoutStep>('address');
   const [addressForm, setAddressForm] = useState({
     email: '',
@@ -97,29 +97,34 @@ export default function Checkout() {
       : 'Checkout - Payment';
 
   const completeOrder = () => {
-    const trackedOrder = createTrackedOrder({
-      firstName: addressForm.firstName,
-      lastName: addressForm.lastName,
-      email: addressForm.email,
-      phone: addressForm.phone,
-      address: addressForm.address,
-      city: addressForm.city,
-      state: addressForm.state,
-      zipCode: addressForm.zipCode,
-      shippingMethod: shippingMethod as 'free' | 'standard' | 'express',
-      items: cartItems,
-      subtotal,
-      shippingCost,
-      tax,
-      total,
-    });
+    try {
+      const trackedOrder = createTrackedOrder({
+        firstName: addressForm.firstName,
+        lastName: addressForm.lastName,
+        email: addressForm.email,
+        phone: addressForm.phone,
+        address: addressForm.address,
+        city: addressForm.city,
+        state: addressForm.state,
+        zipCode: addressForm.zipCode,
+        shippingMethod: shippingMethod as 'free' | 'standard' | 'express',
+        items: cartItems,
+        subtotal,
+        shippingCost,
+        tax,
+        total,
+      });
 
-    saveTrackedOrder(trackedOrder);
-    void clearCart();
-    showSuccessToast('Order confirmed', `Your order ${trackedOrder.orderNumber} is being prepared.`);
-    navigate('/order-success', {
-      state: { orderNumber: trackedOrder.orderNumber },
-    });
+      saveTrackedOrder(trackedOrder);
+      void storeClearCart();
+      showSuccessToast('Order confirmed', `Your order ${trackedOrder.orderNumber} is being prepared.`);
+      navigate('/order-success', {
+        state: { orderNumber: trackedOrder.orderNumber },
+      });
+    } catch (err) {
+      showErrorToast('Order failed', err instanceof Error ? err.message : 'Unable to complete your order.');
+      setIsProcessing(false);
+    }
   };
 
   const handleAddressSubmit = (event: React.FormEvent) => {

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { Helmet } from 'react-helmet-async';
-import { Heart, Minus, Plus, Star } from 'lucide-react';
+import { Heart, Minus, Plus, Star, MessageCircle } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useProduct } from '../hooks/useProducts';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { addToCart } from '../lib/cart';
+import { useChatStore } from '../store/chatStore';
 
 function formatReviewDate(date: string) {
   if (!date) {
@@ -33,6 +34,7 @@ export default function ProductDetail() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'shipping'>('description');
+  const openChat = useChatStore((s) => s.openChat);
 
   useEffect(() => {
     setSelectedImage(0);
@@ -201,6 +203,17 @@ export default function ProductDetail() {
                   aria-label={`Add ${quantity} ${product.name} to cart`}
                 >
                   Add to Cart
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openChat(`Tell me more about ${product.name} and add it to my cart if it's available`)}
+                  className="flex w-full items-center justify-center gap-2 rounded-full py-4 transition-all hover:scale-105"
+                  style={{ backgroundColor: '#F0F4F0', color: '#5A7050', border: '2px solid #C8D8C0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
+                  aria-label={`Ask AI about ${product.name}`}
+                >
+                  <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                  Ask AI about this
                 </button>
 
                 <button

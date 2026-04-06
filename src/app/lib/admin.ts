@@ -1,24 +1,8 @@
 import { getSupabaseClient } from './supabase';
+import { handleSupabaseError } from './errors';
+import type { AdminOrder, AdminCustomer, OrderStatus } from '../types';
 
-export interface AdminOrder {
-  id: string;
-  orderNumber: string;
-  customer: string;
-  email: string;
-  date: string;
-  total: number;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Packed' | 'Confirmed' | 'In Transit' | 'Out for Delivery';
-}
-
-export interface AdminCustomer {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  createdAt: string;
-  totalSpent: number;
-  orderCount: number;
-}
+export type { AdminOrder, AdminCustomer };
 
 export async function fetchAllOrders(): Promise<AdminOrder[]> {
   const supabase = getSupabaseClient();
@@ -28,7 +12,7 @@ export async function fetchAllOrders(): Promise<AdminOrder[]> {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to load orders');
 
   return (data ?? []).map((row) => ({
     id: row.order_number || row.id,
@@ -60,7 +44,7 @@ export async function updateOrderStatus(orderNumber: string, status: string) {
     .update({ status })
     .eq('order_number', orderNumber);
 
-  if (error) throw error;
+  if (error) handleSupabaseError(error, 'Failed to update order status');
 }
 
 export async function fetchAllCustomers(): Promise<AdminCustomer[]> {
@@ -72,7 +56,7 @@ export async function fetchAllCustomers(): Promise<AdminCustomer[]> {
     .select('id, role, created_at')
     .order('created_at', { ascending: false });
 
-  if (profilesError) throw profilesError;
+  if (profilesError) handleSupabaseError(profilesError, 'Failed to load customer profiles');
   if (!profiles || profiles.length === 0) return [];
 
   // Get order aggregates for all users

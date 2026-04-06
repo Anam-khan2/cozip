@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { ArrowLeft, ChevronLeft, ChevronRight, Upload, X } from 'lucide-react';
 import { createProduct, uploadProductImages } from '../lib/products';
 import { PageSeo } from '../components/PageSeo';
+import { showErrorToast } from '../lib/notifications';
 
 type ProductFormState = {
   productName: string;
@@ -175,6 +176,7 @@ export default function AddProduct() {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to add product right now.';
       setSubmitError(message);
+      showErrorToast('Product error', message);
     } finally {
       setIsSubmitting(false);
     }

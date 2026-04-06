@@ -83,7 +83,7 @@ export default function Shop() {
         <section className="store-section pt-0" aria-label="Product collection">
           <div className="store-shell">
             {loading ? (
-              <ProductGridSkeleton count={6} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 md:gap-10" />
+              <ProductGridSkeleton count={8} className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 md:gap-10" />
             ) : error ? (
               <section className="mx-auto max-w-3xl rounded-[2rem] border px-6 py-10 text-center lg:px-10 lg:py-16" style={{ backgroundColor: '#FFF9FB', borderColor: '#F4D4DC' }} aria-live="polite">
                 <h2 className="mb-3 text-3xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Unable to load products</h2>

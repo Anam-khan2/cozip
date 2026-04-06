@@ -1,15 +1,44 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { MapPin, PackageCheck, Truck } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { EmptyState } from '../components/EmptyState';
-import { formatOrderNumber, getTrackedOrder } from '../lib/orderTracking';
+import { formatOrderNumber, getTrackedOrder, getTrackedOrderFromSupabase } from '../lib/orderTracking';
 import { PageSeo } from '../components/PageSeo';
+import { showErrorToast } from '../lib/notifications';
+import { Skeleton } from '../components/ui/skeleton';
+import type { TrackedOrder } from '../types';
 
 export default function OrderTrackingDetails() {
   const { orderNumber = '' } = useParams();
-  const trackedOrder = getTrackedOrder(orderNumber);
+  const [trackedOrder, setTrackedOrder] = useState<TrackedOrder | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        // Try localStorage first (instant), then Supabase
+        const local = getTrackedOrder(orderNumber);
+        if (local) {
+          if (!cancelled) { setTrackedOrder(local); setLoading(false); }
+          return;
+        }
+        const remote = await getTrackedOrderFromSupabase(orderNumber);
+        if (!cancelled) { setTrackedOrder(remote); setLoading(false); }
+      } catch (err) {
+        if (!cancelled) {
+          setLoading(false);
+          showErrorToast('Tracking error', err instanceof Error ? err.message : 'Failed to load order details.');
+        }
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [orderNumber]);
+
   const pageTitle = trackedOrder ? `Track ${formatOrderNumber(trackedOrder.orderNumber)}` : 'Order Tracking';
 
   return (
@@ -19,9 +48,71 @@ export default function OrderTrackingDetails() {
 
       <main className="store-section">
         <div className="store-shell">
-          <Breadcrumbs items={[{ label: 'Track Order', to: '/track-order' }, { label: trackedOrder ? formatOrderNumber(trackedOrder.orderNumber) : 'Order Not Found' }]} className="mb-8" />
+          <Breadcrumbs items={[{ label: 'Track Order', to: '/track-order' }, { label: trackedOrder ? formatOrderNumber(trackedOrder.orderNumber) : loading ? 'Loading…' : 'Order Not Found' }]} className="mb-8" />
 
-          {!trackedOrder ? (
+          {loading ? (
+            <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.95fr)] xl:items-start">
+              <div className="space-y-8">
+                {/* Header card skeleton */}
+                <div className="overflow-hidden rounded-[2rem] border" style={{ backgroundColor: '#FFFFFF', borderColor: '#D4C4B0' }}>
+                  <div className="border-b px-6 py-5 md:px-8 space-y-3" style={{ borderColor: '#E8DDC8', backgroundColor: '#FBF8F1' }}>
+                    <Skeleton className="h-4 w-40 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <Skeleton className="h-9 w-56 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <Skeleton className="h-4 w-72 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2 md:p-8 xl:grid-cols-4">
+                    {[1, 2, 3, 4].map((n) => (
+                      <div key={n} className="rounded-2xl p-5" style={{ backgroundColor: '#FAF8F3' }}>
+                        <Skeleton className="mb-2 h-3 w-16 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                        <Skeleton className="h-5 w-24 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Timeline skeleton */}
+                <div className="rounded-[2rem] border p-6 md:p-8" style={{ backgroundColor: '#FFFFFF', borderColor: '#D4C4B0' }}>
+                  <Skeleton className="mb-2 h-8 w-52 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  <Skeleton className="mb-6 h-4 w-80 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  <div className="space-y-5">
+                    {[1, 2, 3, 4].map((n) => (
+                      <div key={n} className="flex gap-4">
+                        <Skeleton className="h-10 w-10 flex-shrink-0 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                        <div className="flex-1 space-y-2 rounded-[1.5rem] border p-5" style={{ borderColor: '#EFE6D3' }}>
+                          <Skeleton className="h-5 w-40 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                          <Skeleton className="h-4 w-full rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                          <Skeleton className="h-4 w-32 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {/* Sidebar skeleton */}
+              <div className="space-y-8">
+                <div className="rounded-[2rem] border p-6 md:p-8 space-y-5" style={{ backgroundColor: '#FFFFFF', borderColor: '#D4C4B0' }}>
+                  <Skeleton className="h-7 w-40 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  {[1, 2, 3, 4].map((n) => (
+                    <div key={n} className="space-y-1">
+                      <Skeleton className="h-3 w-20 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                      <Skeleton className="h-5 w-36 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-[2rem] border p-6 md:p-8 space-y-4" style={{ backgroundColor: '#FFFFFF', borderColor: '#D4C4B0' }}>
+                  <Skeleton className="h-7 w-32 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  {[1, 2].map((n) => (
+                    <div key={n} className="flex gap-4 rounded-2xl p-3" style={{ backgroundColor: '#FAF8F3' }}>
+                      <Skeleton className="h-16 w-16 flex-shrink-0 rounded-xl" style={{ backgroundColor: '#EEF2EE' }} />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                        <Skeleton className="h-3 w-12 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : !trackedOrder ? (
             <EmptyState
               icon={<PackageCheck className="h-8 w-8" aria-hidden="true" />}
               title="Order details not found"

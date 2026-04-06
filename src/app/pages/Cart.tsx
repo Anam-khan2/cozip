@@ -6,12 +6,13 @@ import { Footer } from '../components/Footer';
 import { EmptyState } from '../components/EmptyState';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
-import { useCart, updateCartQuantity, removeFromCart } from '../lib/cart';
+import { useCartStore } from '../store/cartStore';
 import { PageSeo } from '../components/PageSeo';
 import { validateCoupon } from '../lib/coupons';
+import { Skeleton } from '../components/ui/skeleton';
 
 export default function Cart() {
-  const { items: cartItems, loading } = useCart();
+  const { items: cartItems, isLoading: loading, updateQuantity: storeUpdateQty, removeItem: storeRemoveItem } = useCartStore();
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [isValidating, setIsValidating] = useState(false);
@@ -24,11 +25,15 @@ export default function Cart() {
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    void updateCartQuantity(itemId, newQuantity);
+    storeUpdateQty(itemId, newQuantity).catch((err: unknown) => {
+      showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to update quantity.');
+    });
   };
 
   const removeItem = (itemId: string) => {
-    void removeFromCart(itemId);
+    storeRemoveItem(itemId).catch((err: unknown) => {
+      showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to remove item.');
+    });
   };
 
   const applyDiscount = async (event: React.FormEvent) => {
@@ -72,16 +77,31 @@ export default function Cart() {
           </header>
 
           {loading ? (
-            <div className="space-y-6">
-              {[1, 2].map((n) => (
-                <div key={n} className="flex gap-6 animate-pulse">
-                  <div className="h-24 w-24 rounded-xl" style={{ backgroundColor: '#EEF2EE' }} />
-                  <div className="flex-1 space-y-3">
-                    <div className="h-5 w-3/4 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
-                    <div className="h-4 w-1/3 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-12">
+              <div className="lg:col-span-2 space-y-0">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:gap-6" style={{ borderBottom: n < 3 ? '1px solid rgba(212,196,176,0.3)' : undefined }}>
+                    <Skeleton className="h-24 w-24 flex-shrink-0 rounded-xl" style={{ backgroundColor: '#EEF2EE' }} />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <Skeleton className="h-5 w-3/4 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                      <Skeleton className="h-5 w-1/4 rounded-full" style={{ backgroundColor: '#F7E7EB' }} />
+                    </div>
+                    <Skeleton className="h-10 w-28 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <Skeleton className="h-5 w-16 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <Skeleton className="h-9 w-9 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+              <div className="space-y-4 rounded-[2rem] border p-6" style={{ backgroundColor: '#FFFFFF', borderColor: '#D4C4B0' }}>
+                <Skeleton className="mb-4 h-6 w-1/2 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                {[1, 2, 3, 4].map((n) => (
+                  <div key={n} className="flex justify-between">
+                    <Skeleton className="h-4 w-20 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                    <Skeleton className="h-4 w-16 rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+                  </div>
+                ))}
+                <Skeleton className="mt-4 h-12 w-full rounded-full" style={{ backgroundColor: '#EEF2EE' }} />
+              </div>
             </div>
           ) : cartItems.length === 0 ? (
             <EmptyState

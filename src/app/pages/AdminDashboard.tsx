@@ -5,7 +5,7 @@ import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YA
 import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
 import cozipLogo from '../../../assets/cozip-web-logo.png';
-import { showInfoToast } from '../lib/notifications';
+import { showErrorToast, showInfoToast } from '../lib/notifications';
 import { PageSeo } from '../components/PageSeo';
 import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
 import { fetchCoupons, createCoupon, deleteCoupon, updateCouponStatus, type Coupon } from '../lib/coupons';
@@ -111,8 +111,8 @@ export default function AdminDashboard() {
           createdAt: c.createdAt,
         })));
         setCoupons(fetchedCoupons);
-      } catch {
-        // Silently handle — tables may not exist yet
+      } catch (err) {
+        showErrorToast('Admin data', err instanceof Error ? err.message : 'Failed to load dashboard data.');
       } finally {
         setDataLoading(false);
       }
@@ -127,7 +127,8 @@ export default function AdminDashboard() {
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order
       ));
-    } catch {
+    } catch (err) {
+      showErrorToast('Status update', err instanceof Error ? err.message : 'Failed to update order status.');
       // Optimistic local update even if DB fails
       setOrders(orders.map(order => 
         order.id === orderId ? { ...order, status: newStatus } : order

@@ -1,11 +1,7 @@
 import { getSupabaseClient } from './supabase';
+import type { FAQ } from '../types';
 
-export interface FAQ {
-  id: string;
-  question: string;
-  answer: string;
-  sortOrder: number;
-}
+export type { FAQ };
 
 export async function fetchFAQs(): Promise<FAQ[]> {
   const supabase = getSupabaseClient();
