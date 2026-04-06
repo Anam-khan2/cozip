@@ -8,6 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatOrderNumber, getTrackedOrder, getTrackedOrderFromSupabase } from '../lib/orderTracking';
 import { PageSeo } from '../components/PageSeo';
 import { showErrorToast } from '../lib/notifications';
+import { formatPKR } from '../lib/pricing';
 import { Skeleton } from '../components/ui/skeleton';
 import type { TrackedOrder } from '../types';
 
@@ -261,7 +262,7 @@ export default function OrderTrackingDetails() {
                           <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Qty: {item.quantity}</p>
                         </div>
                         <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>
-                          ${(item.price * item.quantity).toFixed(2)}
+                          {formatPKR(item.price * item.quantity)}
                         </p>
                       </li>
                     ))}
@@ -270,20 +271,22 @@ export default function OrderTrackingDetails() {
                   <dl className="space-y-3 rounded-2xl p-5" style={{ backgroundColor: '#FAF8F3' }}>
                     <div className="flex justify-between">
                       <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Subtotal</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${trackedOrder.subtotal.toFixed(2)}</dd>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{formatPKR(trackedOrder.subtotal)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Shipping</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${trackedOrder.shippingCost.toFixed(2)}</dd>
+                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Delivery</dt>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{trackedOrder.shippingCost === 0 ? 'Free' : formatPKR(trackedOrder.shippingCost)}</dd>
                     </div>
-                    <div className="flex justify-between">
-                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Tax</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${trackedOrder.tax.toFixed(2)}</dd>
-                    </div>
+                    {trackedOrder.tax > 0 && (
+                      <div className="flex justify-between">
+                        <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>COD Tax (4%)</dt>
+                        <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{formatPKR(trackedOrder.tax)}</dd>
+                      </div>
+                    )}
                     <hr style={{ borderColor: '#D4C4B0', borderWidth: '1px' }} />
                     <div className="flex justify-between">
                       <dt className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>Total</dt>
-                      <dd className="text-xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${trackedOrder.total.toFixed(2)}</dd>
+                      <dd className="text-xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>{formatPKR(trackedOrder.total)}</dd>
                     </div>
                   </dl>
 

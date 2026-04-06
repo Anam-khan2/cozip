@@ -193,6 +193,7 @@ export type TrackedOrder = {
   email: string;
   phone: string;
   shippingMethod: ShippingMethod;
+  paymentMethod?: 'stripe' | 'cod';
   status: OrderStatus;
   statusDescription: string;
   carrier: string;
@@ -224,6 +225,7 @@ export type CreateTrackedOrderInput = {
   shippingCost: number;
   tax: number;
   total: number;
+  paymentMethod?: 'stripe' | 'cod';
 };
 
 // ─── Admin ──────────────────────────────────────────────────────────────

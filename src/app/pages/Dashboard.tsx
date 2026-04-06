@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { Package, Heart, Settings, LayoutDashboard, LogOut, ChevronRight, Menu, X } from 'lucide-react';
+import { formatPKR } from '../lib/pricing';
 import { BrandLogo } from '../components/BrandLogo';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
@@ -425,7 +426,7 @@ export default function Dashboard() {
                               fontWeight: 600
                             }}
                           >
-                            ${order.total.toFixed(2)}
+                            {formatPKR(order.total)}
                           </td>
 
                           {/* View Details Button */}
@@ -532,7 +533,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                    {formatPKR(orders.reduce((sum, order) => sum + order.total, 0))}
                   </p>
                 </article>
 
@@ -650,7 +651,7 @@ export default function Dashboard() {
                     className="text-3xl"
                     style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}
                   >
-                    ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                    {formatPKR(orders.reduce((sum, order) => sum + order.total, 0))}
                   </p>
                 </article>
 
@@ -730,7 +731,7 @@ export default function Dashboard() {
                           <p 
                             style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}
                           >
-                            ${order.total.toFixed(2)}
+                            {formatPKR(order.total)}
                           </p>
                         </div>
                       </div>
@@ -803,7 +804,7 @@ export default function Dashboard() {
                         <Link to={`/product/${item.productId}`}>
                           <h3 className="text-sm mb-1 truncate hover:opacity-70 transition-all" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{item.name}</h3>
                         </Link>
-                        <p className="text-lg mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${item.price.toFixed(2)}</p>
+                        <p className="text-lg mb-2" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>{formatPKR(item.price)}</p>
                         <div className="flex gap-2">
                           <button onClick={() => { addToCart(item.productId).then(() => showSuccessToast('Added to cart', item.name)).catch((err: unknown) => showErrorToast('Cart error', err instanceof Error ? err.message : 'Failed to add to cart.')); }} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Add to Cart</button>
                           <button onClick={() => removeFromWishlist(item.id).catch((err: unknown) => showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.'))} className="text-xs px-3 py-1 rounded-full transition-all hover:scale-105" style={{ backgroundColor: '#FADADD', color: '#F4A6B2', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Remove</button>

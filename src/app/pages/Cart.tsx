@@ -10,6 +10,7 @@ import { useCartStore } from '../store/cartStore';
 import { PageSeo } from '../components/PageSeo';
 import { validateCoupon } from '../lib/coupons';
 import { Skeleton } from '../components/ui/skeleton';
+import { calcDeliveryCharge, formatPKR, FREE_DELIVERY_THRESHOLD } from '../lib/pricing';
 
 export default function Cart() {
   const { items: cartItems, isLoading: loading, updateQuantity: storeUpdateQty, removeItem: storeRemoveItem } = useCartStore();
@@ -18,10 +19,9 @@ export default function Cart() {
   const [isValidating, setIsValidating] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRate = 0.08;
-  const tax = subtotal * taxRate;
-  const shippingCost = subtotal > 50 ? 0 : 5.99;
-  const total = subtotal + tax + shippingCost - appliedDiscount;
+  const deliveryCharge = calcDeliveryCharge(subtotal);
+  // Tax (4% COD) is calculated at checkout depending on payment method
+  const total = subtotal + deliveryCharge - appliedDiscount;
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -133,8 +133,8 @@ export default function Cart() {
                           </Link>
                           <p className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }} itemProp="offers" itemScope itemType="https://schema.org/Offer">
                             <meta itemProp="price" content={item.price.toString()} />
-                            <meta itemProp="priceCurrency" content="USD" />
-                            ${item.price.toFixed(2)}
+                            <meta itemProp="priceCurrency" content="PKR" />
+                            {formatPKR(item.price)}
                           </p>
                         </div>
 
@@ -153,7 +153,7 @@ export default function Cart() {
 
                         <div className="self-start text-left sm:self-center sm:text-right">
                           <p className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>
-                            ${(item.price * item.quantity).toFixed(2)}
+                            {formatPKR(item.price * item.quantity)}
                           </p>
                         </div>
 
@@ -183,26 +183,26 @@ export default function Cart() {
                   <dl className="mb-6 space-y-4">
                     <div className="flex justify-between">
                       <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Subtotal</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${subtotal.toFixed(2)}</dd>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{formatPKR(subtotal)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Tax (8%)</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${tax.toFixed(2)}</dd>
+                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Delivery</dt>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{deliveryCharge === 0 ? 'Free' : formatPKR(deliveryCharge)}</dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Shipping</dt>
-                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</dd>
+                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.8rem' }}>COD Tax (4%)</dt>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontWeight: 400, fontSize: '0.8rem' }}>Applied at checkout</dd>
                     </div>
                     {appliedDiscount > 0 && (
                       <div className="flex justify-between">
                         <dt style={{ fontFamily: 'Inter, sans-serif', color: '#F4A6B2' }}>Discount</dt>
-                        <dd style={{ fontFamily: 'Inter, sans-serif', color: '#F4A6B2', fontWeight: 500 }}>-${appliedDiscount.toFixed(2)}</dd>
+                        <dd style={{ fontFamily: 'Inter, sans-serif', color: '#F4A6B2', fontWeight: 500 }}>-{formatPKR(appliedDiscount)}</dd>
                       </div>
                     )}
                     <hr style={{ borderColor: '#D4C4B0', borderWidth: '1px' }} />
                     <div className="flex items-center justify-between">
                       <dt className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>Total</dt>
-                      <dd className="text-2xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${total.toFixed(2)}</dd>
+                      <dd className="text-2xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>{formatPKR(total)}</dd>
                     </div>
                   </dl>
 
@@ -226,13 +226,13 @@ export default function Cart() {
                     )}
                   </form>
 
-                  {subtotal < 50 && (
+                  {subtotal < FREE_DELIVERY_THRESHOLD && (
                     <p className="mb-6 rounded-xl p-3 text-sm" style={{ backgroundColor: '#FAF8F3', fontFamily: 'Inter, sans-serif', color: '#7A9070', border: '1px solid #D4C4B0' }} role="status">
-                      Add ${(50 - subtotal).toFixed(2)} more for free shipping!
+                      Add {formatPKR(FREE_DELIVERY_THRESHOLD - subtotal)} more for free delivery!
                     </p>
                   )}
 
-                  <Link to="/checkout" className="flex w-full items-center justify-center rounded-full px-6 py-5 text-center text-lg leading-tight transition-all hover:scale-[1.02]" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 8px 32px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }} aria-label={`Proceed to checkout with total of $${total.toFixed(2)}`}>
+                  <Link to="/checkout" className="flex w-full items-center justify-center rounded-full px-6 py-5 text-center text-lg leading-tight transition-all hover:scale-[1.02]" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 8px 32px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }} aria-label={`Proceed to checkout with total of ${formatPKR(total)}`}>
                     Proceed to Checkout
                   </Link>
 

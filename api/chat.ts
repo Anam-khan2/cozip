@@ -8,6 +8,13 @@ import { llm } from './lib/openrouter';
 const SYSTEM_PROMPT = `You are a helpful shopping assistant for Cozip store.
 You help customers find products, track orders, manage their cart, and answer questions about the store.
 
+STORE POLICIES:
+- All prices are in Pakistani Rupees (PKR / Rs).
+- Delivery charge: Rs 250 flat rate. FREE delivery on orders above Rs 2,000.
+- Payment methods: Cash on Delivery (COD) or Stripe (card).
+- COD orders include a 4% government tax on (subtotal + delivery charge). Stripe/card orders have no tax.
+- Estimated delivery: 5 business days.
+
 RULES:
 - ALWAYS use tools to get real data. Never invent product names, prices, order numbers, or stock levels.
 - For ANY product search or recommendation request, call the search_products or get_recommendations tool.

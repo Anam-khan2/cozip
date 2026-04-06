@@ -122,6 +122,7 @@ function mapRowToTrackedOrder(row: any): TrackedOrder {
     state: row.state,
     zipCode: row.zip_code,
     shippingMethod: row.shipping_method,
+    paymentMethod: row.payment_method,
     status: row.status,
     statusDescription: row.status_description,
     carrier: row.carrier,
@@ -174,6 +175,7 @@ async function saveOrderToSupabase(order: TrackedOrder) {
         state: order.state,
         zip_code: order.zipCode,
         shipping_method: order.shippingMethod,
+        payment_method: order.paymentMethod ?? 'cod',
         status: order.status,
         status_description: order.statusDescription,
         carrier: order.carrier,
@@ -202,7 +204,7 @@ export function createTrackedOrder(input: CreateTrackedOrderInput) {
   const createdAt = new Date();
   const orderNumber = `CZP-${Math.floor(10000 + Math.random() * 90000)}`;
   const customerName = `${input.firstName} ${input.lastName}`.trim();
-  const estimatedDeliveryDate = addDays(createdAt, input.shippingMethod === 'express' ? 2 : input.shippingMethod === 'free' ? 6 : 4);
+  const estimatedDeliveryDate = addDays(createdAt, 5);
   const orderPlacedAt = formatTimestamp(createdAt);
 
   return {
@@ -215,6 +217,7 @@ export function createTrackedOrder(input: CreateTrackedOrderInput) {
     state: input.state,
     zipCode: input.zipCode,
     shippingMethod: input.shippingMethod,
+    paymentMethod: input.paymentMethod,
     status: 'Packed' as const,
     statusDescription: 'Your order is confirmed and currently being packed by the Cozip fulfillment team.',
     carrier: input.shippingMethod === 'express' ? 'Leopards Courier' : 'BlueEX',

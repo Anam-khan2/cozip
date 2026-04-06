@@ -9,11 +9,12 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { createTrackedOrder, saveTrackedOrder } from '../lib/orderTracking';
 import { useCartStore } from '../store/cartStore';
 import { PageSeo } from '../components/PageSeo';
+import { calcDeliveryCharge, calcCodTax, formatPKR } from '../lib/pricing';
 
 // Stripe test/sandbox publishable key
 const stripePromise = loadStripe('pk_test_TYooMQauvdEDq54NiTphI7jx');
 
-type CheckoutStep = 'address' | 'shipping' | 'payment';
+type CheckoutStep = 'address' | 'payment';
 type PaymentMethod = 'stripe' | 'cod';
 
 const CARD_ELEMENT_OPTIONS = {
@@ -28,7 +29,7 @@ const CARD_ELEMENT_OPTIONS = {
   },
 };
 
-function StripeCardForm({ total, isProcessing, onSubmit, onBack }: { total: number; isProcessing: boolean; onSubmit: () => void; onBack: () => void }) {
+function StripeCardForm({ total, isProcessing, onSubmit, onBack }: { total: string; isProcessing: boolean; onSubmit: () => void; onBack: () => void }) {
   const stripe = useStripe();
   const elements = useElements();
 
@@ -60,7 +61,7 @@ function StripeCardForm({ total, isProcessing, onSubmit, onBack }: { total: numb
           Back
         </button>
         <button type="submit" disabled={isProcessing || !stripe} className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
-          {isProcessing ? 'Processing…' : `Pay $${total.toFixed(2)}`}
+          {isProcessing ? 'Processing…' : `Pay ${total}`}
         </button>
       </div>
     </form>
@@ -81,20 +82,17 @@ export default function Checkout() {
     zipCode: '',
     phone: '',
   });
-  const [shippingMethod, setShippingMethod] = useState('standard');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRate = 0.08;
-  const tax = subtotal * taxRate;
-  const shippingCost = shippingMethod === 'express' ? 12.99 : shippingMethod === 'standard' ? 5.99 : 0;
-  const total = subtotal + tax + shippingCost;
+  const deliveryCharge = calcDeliveryCharge(subtotal);
+  const isCod = paymentMethod === 'cod';
+  const tax = isCod ? calcCodTax(subtotal, deliveryCharge) : 0;
+  const total = subtotal + deliveryCharge + tax;
   const checkoutTitle = currentStep === 'address'
     ? 'Checkout - Address'
-    : currentStep === 'shipping'
-      ? 'Checkout - Shipping'
-      : 'Checkout - Payment';
+    : 'Checkout - Payment';
 
   const completeOrder = () => {
     try {
@@ -107,12 +105,13 @@ export default function Checkout() {
         city: addressForm.city,
         state: addressForm.state,
         zipCode: addressForm.zipCode,
-        shippingMethod: shippingMethod as 'free' | 'standard' | 'express',
+        shippingMethod: 'standard' as const,
         items: cartItems,
         subtotal,
-        shippingCost,
+        shippingCost: deliveryCharge,
         tax,
         total,
+        paymentMethod,
       });
 
       saveTrackedOrder(trackedOrder);
@@ -128,11 +127,6 @@ export default function Checkout() {
   };
 
   const handleAddressSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    setCurrentStep('shipping');
-  };
-
-  const handleShippingSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setCurrentStep('payment');
   };
@@ -156,8 +150,7 @@ export default function Checkout() {
 
   const steps: Array<{ key: CheckoutStep; label: string; step: number }> = [
     { key: 'address', label: 'Address', step: 1 },
-    { key: 'shipping', label: 'Shipping', step: 2 },
-    { key: 'payment', label: 'Payment', step: 3 },
+    { key: 'payment', label: 'Payment', step: 2 },
   ];
 
   return (
@@ -265,43 +258,8 @@ export default function Checkout() {
                   </fieldset>
 
                   <button type="submit" className="w-full rounded-full py-4 text-lg transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
-                    Continue to Shipping
+                    Continue to Payment
                   </button>
-                </form>
-              )}
-
-              {currentStep === 'shipping' && (
-                <form onSubmit={handleShippingSubmit} className="max-w-2xl space-y-6">
-                  <fieldset>
-                    <legend className="mb-6 text-2xl" style={{ fontFamily: 'Playfair Display, serif', color: '#5A7050', fontWeight: 600 }}>Shipping Method</legend>
-                    <div className="space-y-4" role="radiogroup" aria-label="Shipping options">
-                      {[
-                        { value: 'free', label: 'Free Shipping', description: '5-7 business days', price: 'Free' },
-                        { value: 'standard', label: 'Standard Shipping', description: '3-5 business days', price: '$5.99' },
-                        { value: 'express', label: 'Express Shipping', description: '1-2 business days', price: '$12.99' },
-                      ].map((option) => (
-                        <label key={option.value} className="flex cursor-pointer items-center justify-between rounded-xl p-5 transition-all" style={{ backgroundColor: '#FFFFFF', border: shippingMethod === option.value ? '2px solid #7A9070' : '2px solid #D4C4B0', boxShadow: shippingMethod === option.value ? '0 4px 16px rgba(122, 144, 112, 0.15)' : 'none' }}>
-                          <div className="flex items-center gap-4">
-                            <input type="radio" name="shipping" value={option.value} checked={shippingMethod === option.value} onChange={(event) => setShippingMethod(event.target.value)} className="h-5 w-5" style={{ accentColor: '#7A9070' }} />
-                            <div>
-                              <p className="mb-1 text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{option.label}</p>
-                              <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{option.description}</p>
-                            </div>
-                          </div>
-                          <p className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{option.price}</p>
-                        </label>
-                      ))}
-                    </div>
-                  </fieldset>
-
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <button type="button" onClick={() => setCurrentStep('address')} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
-                      Back
-                    </button>
-                    <button type="submit" className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
-                      Continue to Payment
-                    </button>
-                  </div>
                 </form>
               )}
 
@@ -338,10 +296,10 @@ export default function Checkout() {
                   {paymentMethod === 'stripe' && (
                     <Elements stripe={stripePromise}>
                       <StripeCardForm
-                        total={total}
+                        total={formatPKR(total)}
                         isProcessing={isProcessing}
                         onSubmit={handleStripeSubmit}
-                        onBack={() => setCurrentStep('shipping')}
+                        onBack={() => setCurrentStep('address')}
                       />
                     </Elements>
                   )}
@@ -352,14 +310,15 @@ export default function Checkout() {
                       <div className="rounded-xl p-6" style={{ backgroundColor: '#FAF8F3', border: '1px solid #D4C4B0' }}>
                         <h3 className="mb-3 text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>Cash on Delivery</h3>
                         <ul className="space-y-2 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', lineHeight: 1.7 }}>
-                          <li>• You will pay <strong style={{ color: '#5A7050' }}>${total.toFixed(2)}</strong> when your order arrives.</li>
+                          <li>• You will pay <strong style={{ color: '#5A7050' }}>{formatPKR(total)}</strong> when your order arrives.</li>
+                          <li>• A 4% government COD tax ({formatPKR(tax)}) is included in this total.</li>
                           <li>• Please have the exact amount ready for the delivery person.</li>
                           <li>• Your order will be confirmed immediately.</li>
                         </ul>
                       </div>
 
                       <div className="flex flex-col gap-4 sm:flex-row">
-                        <button type="button" onClick={() => setCurrentStep('shipping')} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
+                        <button type="button" onClick={() => setCurrentStep('address')} className="flex-1 rounded-full py-4 text-lg transition-all hover:opacity-80" style={{ backgroundColor: '#FFFFFF', color: '#7A9070', border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', fontWeight: 500 }}>
                           Back
                         </button>
                         <button type="button" onClick={handleCodSubmit} disabled={isProcessing} className="flex-1 rounded-full py-4 text-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60" style={{ backgroundColor: '#7A9070', color: '#ffffff', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>
@@ -385,7 +344,7 @@ export default function Checkout() {
                       <div className="min-w-0 flex-1">
                         <h3 className="product-title-wrap mb-1 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{item.name}</h3>
                         <p className="mb-1 text-xs" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Qty: {item.quantity}</p>
-                        <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>${(item.price * item.quantity).toFixed(2)}</p>
+                        <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>{formatPKR(item.price * item.quantity)}</p>
                       </div>
                     </li>
                   ))}
@@ -396,20 +355,22 @@ export default function Checkout() {
                 <dl className="space-y-3">
                   <div className="flex justify-between">
                     <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>Subtotal</dt>
-                    <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${subtotal.toFixed(2)}</dd>
+                    <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{formatPKR(subtotal)}</dd>
                   </div>
                   <div className="flex justify-between">
-                    <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>Shipping</dt>
-                    <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{shippingCost === 0 ? 'Free' : `$${shippingCost.toFixed(2)}`}</dd>
+                    <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>Delivery</dt>
+                    <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{deliveryCharge === 0 ? 'Free' : formatPKR(deliveryCharge)}</dd>
                   </div>
-                  <div className="flex justify-between">
-                    <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>Tax</dt>
-                    <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>${tax.toFixed(2)}</dd>
-                  </div>
+                  {isCod && tax > 0 && (
+                    <div className="flex justify-between">
+                      <dt style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>COD Tax (4%)</dt>
+                      <dd style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 500 }}>{formatPKR(tax)}</dd>
+                    </div>
+                  )}
                   <hr style={{ borderColor: '#D4C4B0', borderWidth: '1px' }} />
                   <div className="flex items-center justify-between pt-2">
                     <dt className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 600 }}>Total</dt>
-                    <dd className="text-2xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>${total.toFixed(2)}</dd>
+                    <dd className="text-2xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>{formatPKR(total)}</dd>
                   </div>
                 </dl>
               </div>
