@@ -8,6 +8,7 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { signOut, useAuthSession } from '../lib/auth';
 import { PageSeo } from '../components/PageSeo';
 import { getUserOrdersFromSupabase, type TrackedOrder } from '../lib/orderTracking';
+import { getSupabaseClient } from '../lib/supabase';
 import { useWishlist } from '../lib/wishlist';
 import { useWishlistStore } from '../store/wishlistStore';
 import { useCartStore } from '../store/cartStore';
@@ -44,6 +45,8 @@ export default function Dashboard() {
   const wishlistStore = useWishlistStore();
 
   useEffect(() => {
+    if (!authSession?.isAuthenticated) return;
+
     async function loadOrders() {
       try {
         const tracked = await getUserOrdersFromSupabase();
@@ -55,9 +58,27 @@ export default function Dashboard() {
         setOrdersLoading(false);
       }
     }
-    if (authSession?.isAuthenticated) {
-      void loadOrders();
-    }
+
+    void loadOrders();
+
+    const supabase = getSupabaseClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      channel = supabase
+        .channel('dashboard-orders')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` },
+          () => { void loadOrders(); }
+        )
+        .subscribe();
+    });
+
+    return () => {
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, [authSession]);
 
   // Get status badge color
