@@ -33,7 +33,9 @@ const CORS_HEADERS: Record<string, string> = {
 // automatically fall back to keyword search when running on Edge — the
 // try/catch in agentTools.search_products handles this gracefully.
 // ---------------------------------------------------------------------------
-export const config = { runtime: 'edge' };
+// Run on Node.js runtime (not Edge) — tools use @xenova/transformers which
+// requires Node built-ins (fs, path, etc.) unavailable in Edge runtime.
+export const config = { runtime: 'nodejs' };
 
 export default async function POST(req: Request): Promise<Response> {
   // Handle CORS preflight

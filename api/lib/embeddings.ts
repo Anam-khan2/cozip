@@ -17,6 +17,8 @@ export async function getEmbeddingModel() {
 export async function generateEmbedding(text: string): Promise<number[]> {
   console.log('[Embeddings] generating for:', text.slice(0, 50));
   const model = await getEmbeddingModel();
-  const output = await model(text, { pooling: 'mean', normalize: true });
-  return Array.from(output.data as Float32Array);
+  // Cast to any: @xenova/transformers return type union is too broad for strict TS
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const output = await (model as any)(text, { pooling: 'mean', normalize: true }) as { data: Float32Array };
+  return Array.from(output.data);
 }
