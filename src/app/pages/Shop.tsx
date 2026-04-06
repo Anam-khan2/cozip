@@ -8,6 +8,7 @@ import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
 import { EmptyState } from '../components/EmptyState';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { addToCart } from '../lib/cart';
+import { addToWishlist } from '../lib/wishlist';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
 
@@ -15,8 +16,14 @@ export default function Shop() {
   const [searchQuery, setSearchQuery] = useState('');
   const { data: products, error, loading } = useProducts();
 
-  const handleWishlist = (productName: string) => {
-    showInfoToast('Saved for later', `${productName} was added to your wishlist.`);
+  const handleWishlist = async (productId: string, productName: string) => {
+    try {
+      await addToWishlist(productId);
+      showSuccessToast('Saved to wishlist', `${productName} has been added to your wishlist.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to add to wishlist.';
+      showErrorToast('Wishlist error', message);
+    }
   };
 
   const handleAddToCart = async (productId: string, productName: string) => {
@@ -112,7 +119,7 @@ export default function Shop() {
                       </Link>
                       <button 
                         type="button"
-                        onClick={() => handleWishlist(product.name)}
+                        onClick={() => handleWishlist(product.id, product.name)}
                         className="absolute top-4 right-4 p-2.5 rounded-full transition-all hover:scale-110"
                         style={{ backgroundColor: '#F4A6B2' }}
                         aria-label={`Add ${product.name} to wishlist`}
