@@ -6,15 +6,20 @@ import { useProducts } from '../hooks/useProducts';
 import { ProductGridSkeleton } from '../components/ProductGridSkeleton';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { addToCart } from '../lib/cart';
-import { addToWishlist } from '../lib/wishlist';
+import { useWishlistStore } from '../store/wishlistStore';
 import { PageSeo } from '../components/PageSeo';
 
 export default function Home() {
   const { data: products, error, loading } = useProducts({ featuredOnly: true, limit: 5 });
+  const wishlistStore = useWishlistStore();
 
   const handleWishlist = async (productId: string, productName: string) => {
     try {
-      await addToWishlist(productId);
+      if (wishlistStore.isInWishlist(productId)) {
+        showInfoToast('Already in wishlist', `${productName} is already saved to your wishlist.`);
+        return;
+      }
+      await wishlistStore.addItem(productId);
       showSuccessToast('Saved to wishlist', `${productName} has been added to your wishlist.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to add to wishlist.';

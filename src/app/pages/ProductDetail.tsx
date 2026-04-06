@@ -8,7 +8,7 @@ import { useProduct } from '../hooks/useProducts';
 import { showInfoToast, showSuccessToast, showErrorToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { addToCart } from '../lib/cart';
-import { addToWishlist } from '../lib/wishlist';
+import { useWishlistStore } from '../store/wishlistStore';
 import { useChatStore } from '../store/chatStore';
 
 function formatReviewDate(date: string) {
@@ -36,6 +36,7 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'shipping'>('description');
   const openChat = useChatStore((s) => s.openChat);
+  const wishlistStore = useWishlistStore();
 
   useEffect(() => {
     setSelectedImage(0);
@@ -221,7 +222,11 @@ export default function ProductDetail() {
                   type="button"
                   onClick={async () => {
                     try {
-                      await addToWishlist(product.id);
+                      if (wishlistStore.isInWishlist(product.id)) {
+                        showInfoToast('Already in wishlist', `${product.name} is already saved to your wishlist.`);
+                        return;
+                      }
+                      await wishlistStore.addItem(product.id);
                       showSuccessToast('Saved to wishlist', `${product.name} has been added to your wishlist.`);
                     } catch (error) {
                       const message = error instanceof Error ? error.message : 'Unable to add to wishlist.';

@@ -6,17 +6,28 @@ import { EmptyState } from '../components/EmptyState';
 import { showErrorToast, showSuccessToast } from '../lib/notifications';
 import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
-import { useWishlist, removeFromWishlist } from '../lib/wishlist';
+import { useWishlistStore } from '../store/wishlistStore';
 import { addToCart } from '../lib/cart';
 import { formatPKR } from '../lib/pricing';
+import { useEffect } from 'react';
 
 export default function Wishlist() {
-  const { items: wishlistItems, loading } = useWishlist();
+  const store = useWishlistStore();
+  const wishlistItems = store.items;
+  const loading = store.isLoading;
 
-  const handleRemoveItem = (itemId: string) => {
-    removeFromWishlist(itemId).catch((err: unknown) => {
+  useEffect(() => {
+    void store.loadWishlist();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      await store.removeItem(itemId);
+      showSuccessToast('Removed', 'Item removed from your wishlist.');
+    } catch (err: unknown) {
       showErrorToast('Wishlist error', err instanceof Error ? err.message : 'Failed to remove item.');
-    });
+    }
   };
 
   const handleAddToCart = (item: { productId: string; name: string }) => {

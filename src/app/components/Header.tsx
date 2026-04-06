@@ -5,10 +5,13 @@ import { BrandLogo } from './BrandLogo';
 import { isNavigationLinkActive, mainNavigationLinks } from '../lib/navigation';
 import { useAuthSession } from '../lib/auth';
 import { useCartStore } from '../store/cartStore';
+import { useWishlistStore } from '../store/wishlistStore';
 
 export function Header() {
   const store = useCartStore();
   const cartCount = store.itemCount();
+  const wishlistStore = useWishlistStore();
+  const wishlistCount = wishlistStore.itemCount();
 
   // Pulse the badge briefly whenever the count increases
   const prevCountRef = useRef(cartCount);
@@ -30,9 +33,15 @@ export function Header() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    void wishlistStore.loadWishlist();
+    wishlistStore.initRealtime();
+    return () => { wishlistStore.disposeRealtime(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const wishlistCount = 4;
   const authSession = useAuthSession();
   const accountDestination = authSession === undefined
     ? '/login'
@@ -143,6 +152,20 @@ export function Header() {
               aria-label={`Wishlist with ${wishlistCount} items`}
             >
               <Heart size={20} style={{ color: '#5A7050' }} />
+              {wishlistCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                  style={{
+                    backgroundColor: '#F4A6B2',
+                    color: '#FFFFFF',
+                    fontFamily: 'Inter, sans-serif',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
 
             <Link 
