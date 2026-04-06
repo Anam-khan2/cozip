@@ -300,6 +300,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      reviews: {
+        Row: {
+          id: string;
+          product_id: string;
+          user_id: string;
+          user_name: string;
+          rating: number;
+          comment: string;
+          admin_reply: string | null;
+          replied_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          user_id: string;
+          user_name: string;
+          rating: number;
+          comment: string;
+          admin_reply?: string | null;
+          replied_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          user_id?: string;
+          user_name?: string;
+          rating?: number;
+          comment?: string;
+          admin_reply?: string | null;
+          replied_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

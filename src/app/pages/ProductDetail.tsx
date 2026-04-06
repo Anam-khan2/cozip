@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useParams } from 'react-router';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router';
 import { Helmet } from 'react-helmet-async';
-import { Heart, Minus, Plus, Star, MessageCircle } from 'lucide-react';
+import { Heart, Minus, Plus, Star, MessageCircle, Send } from 'lucide-react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useProduct } from '../hooks/useProducts';
@@ -10,6 +10,8 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { useCartStore } from '../store/cartStore';
 import { useWishlistStore } from '../store/wishlistStore';
 import { useChatStore } from '../store/chatStore';
+import { useAuthSession } from '../lib/auth';
+import { getReviewsForProduct, submitReview, getCurrentUserReviewForProduct, type Review } from '../lib/reviews';
 
 function formatReviewDate(date: string) {
   if (!date) {
@@ -31,6 +33,7 @@ function formatReviewDate(date: string) {
 
 export default function ProductDetail() {
   const { productId } = useParams();
+  const navigate = useNavigate();
   const { data: product, error, loading } = useProduct(productId);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -38,10 +41,64 @@ export default function ProductDetail() {
   const openChat = useChatStore((s) => s.openChat);
   const wishlistStore = useWishlistStore();
   const cartStore = useCartStore();
+  const authSession = useAuthSession();
+
+  // Reviews state
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const reviewFormRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSelectedImage(0);
   }, [product?.id]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    setReviewsLoading(true);
+    void getReviewsForProduct(product.id).then((data) => {
+      setReviews(data);
+    }).finally(() => setReviewsLoading(false));
+
+    if (authSession?.isAuthenticated) {
+      void getCurrentUserReviewForProduct(product.id).then((existing) => {
+        setHasReviewed(existing !== null);
+      });
+    }
+  }, [product?.id, authSession?.isAuthenticated]);
+
+  async function handleSubmitReview(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reviewComment.trim()) {
+      showErrorToast('Review', 'Please write your review comment.');
+      return;
+    }
+    setReviewSubmitting(true);
+    try {
+      await submitReview(product!.id, reviewRating, reviewComment.trim());
+      showSuccessToast('Review submitted', 'Thank you for your review!');
+      setShowReviewForm(false);
+      setReviewComment('');
+      setReviewRating(5);
+      setHasReviewed(true);
+      const updated = await getReviewsForProduct(product!.id);
+      setReviews(updated);
+    } catch (err) {
+      showErrorToast('Review', err instanceof Error ? err.message : 'Failed to submit review.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }
+
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    : product?.rating ?? 0;
+  const totalReviews = reviews.length;
 
   if (loading) {
     return (
@@ -319,59 +376,154 @@ export default function ProductDetail() {
           </h2>
 
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
+            {/* Sidebar: rating summary + write review */}
             <aside className="lg:col-span-1">
               <div className="sticky top-24 rounded-3xl p-8" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', boxShadow: '0 10px 40px rgba(122, 144, 112, 0.12)' }}>
                 <div className="mb-8 text-center">
                   <p className="mb-3 text-4xl sm:text-5xl lg:text-6xl" style={{ fontFamily: 'Inter, sans-serif', color: '#5A7050', fontWeight: 700 }}>
-                    {product.rating.toFixed(1)}
+                    {avgRating.toFixed(1)}
                   </p>
                   <p className="mb-4 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>out of 5</p>
                   <div className="mb-4 flex items-center justify-center gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
-                      <Star key={star} className="h-6 w-6" fill={star <= Math.round(product.rating) ? '#F4A6B2' : 'none'} style={{ color: star <= Math.round(product.rating) ? '#F4A6B2' : '#D4C4B0', strokeWidth: 2 }} aria-hidden="true" />
+                      <Star key={star} className="h-6 w-6" fill={star <= Math.round(avgRating) ? '#F4A6B2' : 'none'} style={{ color: star <= Math.round(avgRating) ? '#F4A6B2' : '#D4C4B0', strokeWidth: 2 }} aria-hidden="true" />
                     ))}
                   </div>
-                  <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Based on {product.reviewCount} reviews</p>
+                  <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Based on {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => showInfoToast('Review flow coming soon', 'Customer review submission is the next storefront enhancement.')}
-                  className="w-full rounded-full py-4 transition-all hover:scale-105"
-                  style={{ backgroundColor: '#7A9070', color: '#FFFFFF', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
-                  aria-label="Write a review"
-                >
-                  Write a Review
-                </button>
+                {authSession?.isAuthenticated ? (
+                  hasReviewed ? (
+                    <div className="w-full rounded-2xl py-4 px-4 text-center" style={{ backgroundColor: '#F0F4F0', fontFamily: 'Inter, sans-serif', color: '#7A9070', fontSize: '0.9rem' }}>
+                      ✓ You've already reviewed this product
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowReviewForm((v) => !v);
+                        setTimeout(() => reviewFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                      }}
+                      className="w-full rounded-full py-4 transition-all hover:scale-105"
+                      style={{ backgroundColor: '#7A9070', color: '#FFFFFF', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
+                    >
+                      {showReviewForm ? 'Cancel' : 'Write a Review'}
+                    </button>
+                  )
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/auth')}
+                    className="w-full rounded-full py-4 transition-all hover:scale-105"
+                    style={{ backgroundColor: '#7A9070', color: '#FFFFFF', boxShadow: '0 6px 24px rgba(122, 144, 112, 0.4)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
+                  >
+                    Sign in to Review
+                  </button>
+                )}
               </div>
             </aside>
 
-            <div className="lg:col-span-2">
-              {product.reviews.length > 0 ? (
+            {/* Reviews list */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Review form (inline, expands when showReviewForm) */}
+              {showReviewForm && (
+                <div ref={reviewFormRef} className="rounded-3xl p-8" style={{ backgroundColor: '#FFFFFF', border: '2px solid #7A9070', boxShadow: '0 10px 40px rgba(122, 144, 112, 0.15)' }}>
+                  <h3 className="mb-6 text-xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>Write Your Review</h3>
+                  <form onSubmit={(e) => { void handleSubmitReview(e); }} className="space-y-6">
+                    {/* Star picker */}
+                    <div>
+                      <p className="mb-3 text-sm font-medium" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45' }}>Your Rating</p>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setReviewRating(star)}
+                            onMouseEnter={() => setHoverRating(star)}
+                            onMouseLeave={() => setHoverRating(0)}
+                            aria-label={`Rate ${star} out of 5`}
+                            className="transition-transform hover:scale-125"
+                          >
+                            <Star
+                              className="h-8 w-8"
+                              fill={star <= (hoverRating || reviewRating) ? '#F4A6B2' : 'none'}
+                              style={{ color: star <= (hoverRating || reviewRating) ? '#F4A6B2' : '#D4C4B0', strokeWidth: 2 }}
+                            />
+                          </button>
+                        ))}
+                        <span className="ml-3 text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>
+                          {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][hoverRating || reviewRating]}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Comment */}
+                    <div>
+                      <label htmlFor="review-comment" className="mb-2 block text-sm font-medium" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45' }}>Your Review</label>
+                      <textarea
+                        id="review-comment"
+                        rows={4}
+                        value={reviewComment}
+                        onChange={(e) => setReviewComment(e.target.value)}
+                        placeholder="Share your experience with this product..."
+                        className="w-full resize-none rounded-2xl px-4 py-3 outline-none focus:ring-2"
+                        style={{ border: '2px solid #D4C4B0', fontFamily: 'Inter, sans-serif', color: '#4A5D45', backgroundColor: '#FAF8F3', focusRingColor: '#7A9070' }}
+                        maxLength={1000}
+                      />
+                      <p className="mt-1 text-right text-xs" style={{ color: '#7A9070' }}>{reviewComment.length}/1000</p>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={reviewSubmitting}
+                      className="flex items-center gap-2 rounded-full px-8 py-3 transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                      style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}
+                    >
+                      <Send className="h-4 w-4" />
+                      {reviewSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* Reviews list */}
+              {reviewsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="rounded-3xl p-6 animate-pulse" style={{ backgroundColor: '#EEF2EE' }}>
+                      <div className="mb-3 h-5 w-32 rounded-full" style={{ backgroundColor: '#D4C4B0' }} />
+                      <div className="h-4 w-full rounded-full" style={{ backgroundColor: '#D4C4B0' }} />
+                    </div>
+                  ))}
+                </div>
+              ) : reviews.length > 0 ? (
                 <div className="space-y-6">
-                  {product.reviews.map((review, index) => (
-                    <article key={`${review.name}-${index}`} className="border-b pb-6" style={{ borderColor: '#D4C4B0' }}>
+                  {reviews.map((review) => (
+                    <article key={review.id} className="rounded-3xl p-6" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D4C4B0' }}>
                       <header className="mb-4">
                         <div className="mb-3 flex items-center gap-1">
                           {[1, 2, 3, 4, 5].map((star) => (
                             <Star key={star} className="h-5 w-5" fill={star <= review.rating ? '#F4A6B2' : 'none'} style={{ color: star <= review.rating ? '#F4A6B2' : '#D4C4B0', strokeWidth: 2 }} aria-hidden="true" />
                           ))}
-                          <span className="sr-only">{review.rating} out of 5 stars</span>
                         </div>
-
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-lg" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{review.name}</h3>
-                          <time dateTime={review.date} className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{formatReviewDate(review.date)}</time>
+                          <h3 className="text-base" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 600 }}>{review.user_name}</h3>
+                          <time dateTime={review.created_at} className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{formatReviewDate(review.created_at)}</time>
                         </div>
                       </header>
-
                       <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.75' }}>{review.comment}</p>
+
+                      {/* Admin reply */}
+                      {review.admin_reply && (
+                        <div className="mt-4 rounded-2xl p-4" style={{ backgroundColor: '#F0F4F0', borderLeft: '3px solid #7A9070' }}>
+                          <p className="mb-1 text-xs font-semibold uppercase tracking-wide" style={{ color: '#5A7050' }}>Store Reply</p>
+                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.7' }}>{review.admin_reply}</p>
+                        </div>
+                      )}
                     </article>
                   ))}
                 </div>
               ) : (
                 <div className="rounded-3xl p-8" style={{ backgroundColor: '#FFFFFF', border: '2px solid #D4C4B0', boxShadow: '0 10px 40px rgba(122, 144, 112, 0.12)' }}>
-                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.75' }}>No reviews have been added for this product yet.</p>
+                  <p style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.75' }}>No reviews yet. Be the first to review this product!</p>
                 </div>
               )}
             </div>

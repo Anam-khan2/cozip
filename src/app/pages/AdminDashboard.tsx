@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight, Menu, X } from 'lucide-react';
+import { Package, ShoppingCart, Users, LayoutDashboard, Plus, Edit2, Trash2, Tag, BarChart3, Mail, TrendingUp, Calendar, ChevronLeft, ChevronRight, UserPlus, UserCheck, Clock3, Sparkles, ArrowUpRight, Menu, X, Star, MessageSquare, Reply } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Bar } from 'recharts';
 import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
@@ -9,6 +9,7 @@ import { showErrorToast, showInfoToast } from '../lib/notifications';
 import { PageSeo } from '../components/PageSeo';
 import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
 import { fetchCoupons, createCoupon, deleteCoupon, updateCouponStatus, type Coupon } from '../lib/coupons';
+import { getAllReviewsForAdmin, replyToReview, deleteReview, type Review } from '../lib/reviews';
 
 // Email Template type
 interface EmailTemplate {
@@ -64,7 +65,7 @@ function moveItem<T>(items: T[], fromIndex: number, toIndex: number) {
 }
 
 export default function AdminDashboard() {
-  const [activeView, setActiveView] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons' | 'analytics' | 'emails'>('orders');
+  const [activeView, setActiveView] = useState<'overview' | 'products' | 'orders' | 'customers' | 'coupons' | 'analytics' | 'emails' | 'reviews'>('orders');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [emailTab, setEmailTab] = useState<'campaigns' | 'templates'>('templates');
   const { data: products, error: productsError, loading: productsLoading, refetch: refetchProducts } = useProducts();
@@ -81,6 +82,10 @@ export default function AdminDashboard() {
   const [customerRecords, setCustomerRecords] = useState<Customer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   // Sample email templates data (kept as static config — not user-generated content)
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplate[]>([
@@ -119,6 +124,38 @@ export default function AdminDashboard() {
     }
     void loadAdminData();
   }, []);
+
+  // Load reviews when reviews tab is opened
+  useEffect(() => {
+    if (activeView !== 'reviews') return;
+    setReviewsLoading(true);
+    void getAllReviewsForAdmin().then(setAllReviews).catch((err) => {
+      showErrorToast('Reviews', err instanceof Error ? err.message : 'Failed to load reviews.');
+    }).finally(() => setReviewsLoading(false));
+  }, [activeView]);
+
+  async function handleSaveReply(reviewId: string) {
+    if (!replyText.trim()) return;
+    try {
+      await replyToReview(reviewId, replyText.trim());
+      setAllReviews((prev) => prev.map((r) => r.id === reviewId ? { ...r, admin_reply: replyText.trim(), replied_at: new Date().toISOString() } : r));
+      setReplyingToId(null);
+      setReplyText('');
+      showSuccessToast('Reply saved', 'Your reply has been published.');
+    } catch (err) {
+      showErrorToast('Reply', err instanceof Error ? err.message : 'Failed to save reply.');
+    }
+  }
+
+  async function handleDeleteReview(reviewId: string) {
+    try {
+      await deleteReview(reviewId);
+      setAllReviews((prev) => prev.filter((r) => r.id !== reviewId));
+      showSuccessToast('Review deleted', 'The review has been removed.');
+    } catch (err) {
+      showErrorToast('Delete', err instanceof Error ? err.message : 'Failed to delete review.');
+    }
+  }
 
   // Handle status change
   const handleStatusChange = async (orderId: string, newStatus: 'Processing' | 'Shipped' | 'Delivered') => {
@@ -609,6 +646,24 @@ export default function AdminDashboard() {
                 Emails
               </button>
             </li>
+
+            {/* Reviews Link */}
+            <li>
+              <button
+                onClick={() => { setActiveView('reviews'); setSidebarOpen(false); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                style={{
+                  backgroundColor: activeView === 'reviews' ? '#F0F4F0' : 'transparent',
+                  color: activeView === 'reviews' ? '#5A7050' : '#7A9070',
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: activeView === 'reviews' ? 600 : 500,
+                }}
+                aria-current={activeView === 'reviews' ? 'page' : undefined}
+              >
+                <Star className="w-5 h-5" aria-hidden="true" />
+                Reviews
+              </button>
+            </li>
           </ul>
         </nav>
 
@@ -657,6 +712,7 @@ export default function AdminDashboard() {
               {activeView === 'coupons' && 'Coupon Management'}
               {activeView === 'analytics' && 'Sales Analytics'}
               {activeView === 'emails' && 'Email Management'}
+              {activeView === 'reviews' && 'Customer Reviews'}
             </h2>
             <p 
               className="text-sm"
@@ -669,6 +725,7 @@ export default function AdminDashboard() {
               {activeView === 'coupons' && 'Manage and create coupons'}
               {activeView === 'analytics' && 'Analyze sales trends and performance'}
               {activeView === 'emails' && 'Manage email campaigns and templates'}
+              {activeView === 'reviews' && 'View and reply to customer product reviews'}
             </p>
             </div>
           </div>
@@ -2506,6 +2563,135 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </section>
+          </div>
+        )}
+
+        {/* ─── Reviews View ──────────────────────────────────────────── */}
+        {activeView === 'reviews' && (
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Stats bar */}
+            <section className="grid grid-cols-2 md:grid-cols-4 gap-4" aria-label="Review metrics">
+              {[
+                { label: 'Total Reviews', value: allReviews.length.toString() },
+                { label: 'Avg Rating', value: allReviews.length > 0 ? (allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length).toFixed(1) : '—' },
+                { label: 'Replied', value: allReviews.filter((r) => r.admin_reply).length.toString() },
+                { label: 'Pending Reply', value: allReviews.filter((r) => !r.admin_reply).length.toString() },
+              ].map((m) => (
+                <article key={m.label} className="rounded-2xl border p-5" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
+                  <p className="text-sm mb-1" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>{m.label}</p>
+                  <p className="text-3xl font-bold" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45' }}>{m.value}</p>
+                </article>
+              ))}
+            </section>
+
+            {/* Reviews table */}
+            <div className="rounded-2xl border overflow-hidden" style={{ backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' }}>
+              <div className="border-b px-6 py-5" style={{ borderColor: '#F3F4F6' }}>
+                <h3 className="text-xl" style={{ fontFamily: 'Playfair Display, serif', color: '#4A5D45', fontWeight: 600 }}>All Reviews</h3>
+              </div>
+
+              {reviewsLoading ? (
+                <div className="px-6 py-12 text-center" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>Loading reviews…</div>
+              ) : allReviews.length === 0 ? (
+                <div className="px-6 py-12 text-center" style={{ fontFamily: 'Inter, sans-serif', color: '#7A9070' }}>No reviews yet.</div>
+              ) : (
+                <div className="divide-y" style={{ borderColor: '#F3F4F6' }}>
+                  {allReviews.map((review) => (
+                    <div key={review.id} className="p-6 space-y-4">
+                      {/* Row top: product, customer, stars, date, delete */}
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45' }}>
+                            {review.product_name || 'Unknown Product'}
+                          </p>
+                          <p className="text-xs" style={{ color: '#7A9070' }}>{review.user_name}</p>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} className="h-4 w-4" fill={s <= review.rating ? '#F4A6B2' : 'none'} style={{ color: s <= review.rating ? '#F4A6B2' : '#D4C4B0' }} />
+                            ))}
+                          </div>
+                          <span className="text-xs" style={{ color: '#7A9070' }}>
+                            {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteReview(review.id)}
+                            className="rounded-lg p-1.5 transition-colors hover:bg-red-50"
+                            style={{ color: '#DC2626' }}
+                            aria-label="Delete review"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Comment */}
+                      <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.7' }}>{review.comment}</p>
+
+                      {/* Existing admin reply */}
+                      {review.admin_reply && replyingToId !== review.id && (
+                        <div className="rounded-xl p-4" style={{ backgroundColor: '#F0F4F0', borderLeft: '3px solid #7A9070' }}>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#5A7050' }}>Your Reply</p>
+                            <button
+                              type="button"
+                              onClick={() => { setReplyingToId(review.id); setReplyText(review.admin_reply ?? ''); }}
+                              className="text-xs underline"
+                              style={{ color: '#7A9070' }}
+                            >Edit</button>
+                          </div>
+                          <p className="text-sm" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', lineHeight: '1.65' }}>{review.admin_reply}</p>
+                        </div>
+                      )}
+
+                      {/* Reply form */}
+                      {replyingToId === review.id ? (
+                        <div className="space-y-3">
+                          <textarea
+                            rows={3}
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Write your reply to this review…"
+                            className="w-full resize-none rounded-xl px-4 py-3 outline-none"
+                            style={{ border: '2px solid #7A9070', fontFamily: 'Inter, sans-serif', color: '#4A5D45', backgroundColor: '#FAF8F3', fontSize: '0.875rem' }}
+                          />
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => void handleSaveReply(review.id)}
+                              disabled={!replyText.trim()}
+                              className="flex items-center gap-2 rounded-full px-5 py-2 text-sm transition-all hover:scale-105 disabled:opacity-50"
+                              style={{ backgroundColor: '#7A9070', color: '#FFFFFF', fontWeight: 600 }}
+                            >
+                              <Reply className="h-4 w-4" />
+                              Save Reply
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setReplyingToId(null); setReplyText(''); }}
+                              className="rounded-full px-5 py-2 text-sm"
+                              style={{ backgroundColor: '#F3F4F6', color: '#7A9070', fontWeight: 600 }}
+                            >Cancel</button>
+                          </div>
+                        </div>
+                      ) : !review.admin_reply && (
+                        <button
+                          type="button"
+                          onClick={() => { setReplyingToId(review.id); setReplyText(''); }}
+                          className="flex items-center gap-2 rounded-full px-4 py-2 text-sm transition-all hover:scale-105"
+                          style={{ backgroundColor: '#F0F4F0', color: '#5A7050', fontWeight: 600 }}
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                          Reply to Review
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>
