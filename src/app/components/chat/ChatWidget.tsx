@@ -247,11 +247,16 @@ export function ChatWidget() {
     ? 'http://localhost:3001/api/chat'
     : '/api/chat';
 
+  const cartItemIds = useMemo(
+    () => cartStore.items.map((i) => i.id),
+    [cartStore.items],
+  );
+
   const { messages, input, setInput, handleSubmit, append, data, isLoading, setMessages } = useChat({
     api: chatApi,
     body: {
       userId,
-      cartItemIds: cartStore.items.map((i) => i.id),
+      cartItemIds,
     },
     onError: (e) => toast.error('Agent error: ' + e.message),
   });
