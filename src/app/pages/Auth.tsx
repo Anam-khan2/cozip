@@ -19,6 +19,8 @@ export default function Auth() {
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const authSession = useAuthSession();
+  // Where to redirect after login — AuthGuard passes `state.from`
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? '/';
 
   // Login form state
   const [loginForm, setLoginForm] = useState({
@@ -43,9 +45,9 @@ export default function Auth() {
 
   useEffect(() => {
     if (authSession?.isAuthenticated) {
-      navigate('/');
+      navigate(redirectTo);
     }
-  }, [authSession?.isAuthenticated, navigate]);
+  }, [authSession?.isAuthenticated, navigate, redirectTo]);
 
   // Handle login submission
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -55,7 +57,7 @@ export default function Auth() {
     try {
       await signIn(loginForm.email, loginForm.password);
       showSuccessToast('Signed in successfully.', 'Welcome back!');
-      navigate('/');
+      navigate(redirectTo);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign in right now.';
       showErrorToast('Sign in failed.', message);
@@ -80,7 +82,7 @@ export default function Auth() {
         lastName: registerForm.lastName,
       });
       showSuccessToast('Account created successfully.', 'You are now signed in and ready to shop.');
-      navigate('/');
+      navigate(redirectTo);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to create account right now.';
       showErrorToast('Registration failed.', message);

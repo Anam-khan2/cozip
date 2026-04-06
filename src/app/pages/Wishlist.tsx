@@ -8,6 +8,7 @@ import { Breadcrumbs } from '../components/Breadcrumbs';
 import { PageSeo } from '../components/PageSeo';
 import { useWishlist, removeFromWishlist } from '../lib/wishlist';
 import { addToCart } from '../lib/cart';
+import { formatPKR } from '../lib/pricing';
 
 export default function Wishlist() {
   const { items: wishlistItems, loading } = useWishlist();
@@ -69,7 +70,7 @@ export default function Wishlist() {
                   </Link>
 
                   <p className="mb-4 text-xl" style={{ fontFamily: 'Inter, sans-serif', color: '#4A5D45', fontWeight: 700 }}>
-                    ${item.price.toFixed(2)}
+                    {formatPKR(item.price)}
                   </p>
 
                   <button type="button" onClick={() => handleAddToCart(item)} className="flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 transition-all hover:scale-105" style={{ backgroundColor: '#7A9070', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(122, 144, 112, 0.25)', fontFamily: 'Inter, sans-serif', fontWeight: 600 }} aria-label={`Add ${item.name} to cart`}>

@@ -60,7 +60,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/wishlist',
-    element: <AuthGuard><Wishlist /></AuthGuard>,
+    element: <Wishlist />,
   },
   {
     path: '/contact',

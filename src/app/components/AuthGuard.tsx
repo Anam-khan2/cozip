@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { getSupabaseClient } from '../lib/supabase';
 
 type GuardState = 'loading' | 'authenticated' | 'unauthenticated';
 
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GuardState>('loading');
+  const location = useLocation();
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +41,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   if (state === 'unauthenticated') {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   return <>{children}</>;
