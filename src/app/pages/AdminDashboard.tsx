@@ -5,9 +5,11 @@ import { ResponsiveContainer, AreaChart, Area, CartesianGrid, Tooltip, XAxis, YA
 import { useProducts } from '../hooks/useProducts';
 import { deleteProductById, deleteProductImages, getProductById, updateProduct, uploadProductImages } from '../lib/products';
 import cozipLogo from '../../../assets/cozip-web-logo.png';
-import { showErrorToast, showInfoToast } from '../lib/notifications';
+import { showErrorToast, showInfoToast, showSuccessToast } from '../lib/notifications';
+import { formatPKR } from '../lib/pricing';
 import { PageSeo } from '../components/PageSeo';
 import { fetchAllOrders, fetchAllCustomers, updateOrderStatus, type AdminOrder, type AdminCustomer } from '../lib/admin';
+import type { OrderStatus } from '../types';
 import { fetchCoupons, createCoupon, deleteCoupon, updateCouponStatus, type Coupon } from '../lib/coupons';
 import { getAllReviewsForAdmin, replyToReview, deleteReview, type Review } from '../lib/reviews';
 
@@ -158,7 +160,7 @@ export default function AdminDashboard() {
   }
 
   // Handle status change
-  const handleStatusChange = async (orderId: string, newStatus: 'Processing' | 'Shipped' | 'Delivered') => {
+  const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
     try {
       await updateOrderStatus(orderId, newStatus);
       setOrders(orders.map(order => 
@@ -1018,7 +1020,7 @@ export default function AdminDashboard() {
                             className="text-sm"
                             style={{ color: '#4A5D45', fontWeight: 600 }}
                           >
-                            ${order.total.toFixed(2)}
+                            {formatPKR(order.total)}
                           </span>
                         </td>
 
@@ -1026,7 +1028,7 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4">
                           <select
                             value={order.status}
-                            onChange={(e) => handleStatusChange(order.id, e.target.value as 'Processing' | 'Shipped' | 'Delivered')}
+                            onChange={(e) => handleStatusChange(order.id, e.target.value as OrderStatus)}
                             className="text-sm px-4 py-2 rounded-full cursor-pointer transition-all hover:opacity-80"
                             style={{
                               ...getStatusStyles(order.status),
@@ -1036,9 +1038,14 @@ export default function AdminDashboard() {
                             }}
                             aria-label={`Status for order ${order.id}`}
                           >
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Packed">Packed</option>
                             <option value="Processing">Processing</option>
+                            <option value="In Transit">In Transit</option>
+                            <option value="Out for Delivery">Out for Delivery</option>
                             <option value="Shipped">Shipped</option>
                             <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
                           </select>
                         </td>
                       </tr>
