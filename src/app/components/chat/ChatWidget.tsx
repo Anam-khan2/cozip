@@ -424,7 +424,7 @@ export function ChatWidget() {
                 </div>
                 <div className="flex items-center gap-1">
                   <a
-                    href="https://wa.me/923107700470"
+                    href="https://wa.me/923053048318"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Chat on WhatsApp"

@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
-    "dev:api": "npx tsx --env-file=.env.local scripts/dev-api.ts",
-    "dev:all": "npx concurrently -n vite,api -c cyan,green \"npm run dev\" \"npm run dev:api\""
+    "build": "node init && vite build",
+    "dev": "node init && vite",
+    "dev:api": "node init && npx tsx --env-file=.env.local scripts/dev-api.ts",
+    "dev:all": "node init && npx concurrently -n vite,api -c cyan,green \"npm run dev\" \"npm run dev:api\""
   },
   "dependencies": {
     "@ai-sdk/groq": "^1.2.9",
@@ -87,7 +87,6 @@
     "tailwindcss": "4.1.12",
     "vite": "6.3.5"
   },
-
   "pnpm": {
     "overrides": {
       "vite": "6.3.5"
