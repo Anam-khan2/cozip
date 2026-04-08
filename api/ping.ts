@@ -1,6 +1,6 @@
 // Minimal diagnostic endpoint — zero dependencies, cannot fail.
 // GET https://<domain>/api/ping
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 
 export default function handler(_req: Request): Response {
   return new Response(

@@ -1,7 +1,7 @@
 // Diagnostic endpoint — returns env var presence and import status
 // Hit GET https://<domain>/api/health to debug FUNCTION_INVOCATION_FAILED
 
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 
 export default async function handler(_req: Request): Promise<Response> {
   const headers: Record<string, string> = {

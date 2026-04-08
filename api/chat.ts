@@ -37,14 +37,10 @@ const CORS_HEADERS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Edge runtime for low-latency streaming
-// Note: tool executions that use @xenova/transformers (vector search) will
-// automatically fall back to keyword search when running on Edge — the
-// try/catch in agentTools.search_products handles this gracefully.
+// Edge runtime — all deps (Groq, Supabase-js, AI SDK) work on Edge.
+// Embeddings return null on Vercel anyway, so no native module needed.
 // ---------------------------------------------------------------------------
-// Run on Node.js runtime (not Edge) — tools use @xenova/transformers which
-// requires Node built-ins (fs, path, etc.) unavailable in Edge runtime.
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'edge' };
 
 export default async function POST(req: Request): Promise<Response> {
   // Handle CORS preflight
