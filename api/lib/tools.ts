@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { supabaseAdmin } from './supabaseServer';
+import { getSupabaseAdmin } from './supabaseServer';
 import { generateEmbedding } from './embeddings';
 
 // ---------------------------------------------------------------------------
@@ -39,7 +39,7 @@ export const agentTools = {
 
         // Only attempt vector search when embeddings are available (local dev)
         if (embedding !== null) {
-          const { data, error } = await supabaseAdmin.rpc('search_products_by_vector', {
+          const { data, error } = await getSupabaseAdmin().rpc('search_products_by_vector', {
             query_vector: JSON.stringify(embedding),
             similarity_threshold: 0.25,
             result_limit: limit,
@@ -56,7 +56,7 @@ export const agentTools = {
 
         // Fallback: text-based search (always used on Vercel; also used when vector returns nothing)
         console.warn('[search_products] Using keyword fallback.');
-        const { data: fallbackData } = await supabaseAdmin
+        const { data: fallbackData } = await getSupabaseAdmin()
           .from('products')
           .select('id,name,price,category,stock,images,is_featured')
           .ilike('name', `%${query}%`)
@@ -67,7 +67,7 @@ export const agentTools = {
         console.error('[search_products] Error:', err);
 
         // Always fall back to text search on any exception
-        const { data: fallbackData } = await supabaseAdmin
+        const { data: fallbackData } = await getSupabaseAdmin()
           .from('products')
           .select('id,name,price,category,stock,images,is_featured')
           .ilike('name', `%${query}%`)
@@ -91,7 +91,7 @@ export const agentTools = {
     }),
     execute: async ({ strategy, category, limit }) => {
       try {
-        let query = supabaseAdmin
+        let query = getSupabaseAdmin()
           .from('products')
           .select('id,name,price,category,stock,images,is_featured');
 
@@ -137,7 +137,7 @@ export const agentTools = {
     execute: async ({ order_number, user_id }) => {
       try {
         if (order_number) {
-          const { data, error } = await supabaseAdmin
+          const { data, error } = await getSupabaseAdmin()
             .from('orders')
             .select('*')
             .eq('order_number', order_number)
@@ -148,7 +148,7 @@ export const agentTools = {
         }
 
         if (user_id) {
-          const { data, error } = await supabaseAdmin
+          const { data, error } = await getSupabaseAdmin()
             .from('orders')
             .select('order_number,status,total,created_at,items')
             .eq('user_id', user_id)
@@ -208,20 +208,20 @@ export const agentTools = {
       // --- Persist the change ---
       try {
         if (action === 'add') {
-          const { error } = await supabaseAdmin.from('cart_items').upsert(
+          const { error } = await getSupabaseAdmin().from('cart_items').upsert(
             { user_id, product_id, quantity: quantity ?? 1 },
             { onConflict: 'user_id,product_id' },
           );
           if (error) return { success: false, action, error: error.message };
         } else if (action === 'remove') {
-          const { error } = await supabaseAdmin
+          const { error } = await getSupabaseAdmin()
             .from('cart_items')
             .delete()
             .eq('id', cart_item_id as string)
             .eq('user_id', user_id);
           if (error) return { success: false, action, error: error.message };
         } else if (action === 'update_quantity') {
-          const { error } = await supabaseAdmin
+          const { error } = await getSupabaseAdmin()
             .from('cart_items')
             .update({ quantity })
             .eq('id', cart_item_id as string)
@@ -230,7 +230,7 @@ export const agentTools = {
         }
 
         // Fetch updated cart to reflect state in UI
-        const { data: cartData } = await supabaseAdmin
+        const { data: cartData } = await getSupabaseAdmin()
           .from('cart_items')
           .select('id,product_id,quantity')
           .eq('user_id', user_id);
@@ -265,7 +265,7 @@ export const agentTools = {
     }),
     execute: async ({ question, topic }) => {
       try {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await getSupabaseAdmin()
           .from('faqs')
           .select('question,answer')
           .limit(20);

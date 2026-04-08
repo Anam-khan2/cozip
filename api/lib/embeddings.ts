@@ -2,6 +2,10 @@
 // Vercel Lambda on import. We lazy-load it only in local dev environments.
 // On Vercel/Lambda the function returns null → tools fall back to keyword search.
 
+// Use a variable path so bundlers (nft / webpack / esbuild) cannot statically
+// trace the import and include the 137 MB native binary in the function bundle.
+const TRANSFORMERS_MODULE = '@xenova/transformers';
+
 const IS_VERCEL = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -16,7 +20,7 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
   try {
     if (!embeddingModel) {
       // Dynamic import so a load failure doesn't crash the whole function
-      const { pipeline, env } = await import('@xenova/transformers');
+      const { pipeline, env } = await import(/* webpackIgnore: true */ TRANSFORMERS_MODULE);
       env.allowRemoteModels = true;
       env.useBrowserCache = false;
       console.log('[Embeddings] Loading all-MiniLM-L6-v2 model…');

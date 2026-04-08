@@ -52,8 +52,27 @@ export default async function POST(req: Request): Promise<Response> {
     return new Response(null, { status: 200, headers: CORS_HEADERS });
   }
 
+  // Only accept POST
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    });
+  }
+
+  const streamData = new StreamData();
+
   try {
-    const { messages, userId, cartItemIds } = (await req.json()) as {
+    const body = await req.json().catch(() => null);
+    if (!body || !Array.isArray(body.messages)) {
+      streamData.close();
+      return new Response(JSON.stringify({ error: 'Invalid request body — messages[] required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      });
+    }
+
+    const { messages, userId, cartItemIds } = body as {
       messages: import('ai').CoreMessage[];
       userId?: string;
       cartItemIds?: string[];
@@ -68,29 +87,36 @@ export default async function POST(req: Request): Promise<Response> {
         }`
       : `${SYSTEM_PROMPT}\n\nCURRENT USER: not logged in. Remind them to log in for cart and order features.`;
 
-    const streamData = new StreamData();
+    // Keep only the last 10 messages to reduce token usage
+    const trimmedMessages = messages.slice(-10);
 
     const result = streamText({
       model: llm,
       system: systemWithContext,
-      messages,
+      messages: trimmedMessages,
       tools: agentTools,
       maxSteps: 3,
+      maxTokens: 512,
       temperature: 0.3, // lower = faster, more deterministic
       onError: ({ error }) => {
         console.error('[api/chat] streamText error:', error);
       },
       onFinish: async ({ steps }) => {
-        // Walk every step's tool results looking for CART_UPDATED events
-        for (const step of steps) {
-          for (const toolResult of (step as { toolResults?: { result: unknown }[] }).toolResults ?? []) {
-            const res = toolResult.result as Record<string, unknown> | null;
-            if (res?.__event === 'CART_UPDATED') {
-              streamData.append({ type: 'CART_UPDATED', ...res });
+        try {
+          // Walk every step's tool results looking for CART_UPDATED events
+          for (const step of steps) {
+            for (const toolResult of (step as { toolResults?: { result: unknown }[] }).toolResults ?? []) {
+              const res = toolResult.result as Record<string, unknown> | null;
+              if (res?.__event === 'CART_UPDATED') {
+                streamData.append({ type: 'CART_UPDATED', ...res });
+              }
             }
           }
+        } catch (err) {
+          console.error('[api/chat] onFinish error:', err);
+        } finally {
+          streamData.close();
         }
-        streamData.close();
       },
     });
 
@@ -98,6 +124,7 @@ export default async function POST(req: Request): Promise<Response> {
   } catch (e) {
     const err = e as Error;
     console.error('[api/chat] Error:', err.message);
+    streamData.close();
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },

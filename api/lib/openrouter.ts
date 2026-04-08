@@ -7,8 +7,8 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY ?? '',
 });
 
-// llama-3.3-70b-versatile: free, fast on Groq LPU hardware, supports tool calling
-export const MODEL_ID = process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile';
+// llama-3.1-8b-instant: 30,000 TPM (vs 12,000 for 70b), fast, supports tool calling
+export const MODEL_ID = process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant';
 
 /**
  * Pre-configured LLM instance ready for use with the Vercel AI SDK.
