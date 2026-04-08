@@ -6,7 +6,8 @@
   "functions": {
     "api/**/*.ts": {
       "memory": 1024,
-      "maxDuration": 30
+      "maxDuration": 30,
+      "excludeFiles": "{node_modules/@xenova/**,node_modules/onnxruntime-node/**,node_modules/onnxruntime-common/**,node_modules/sharp/**}"
     }
   },
   "rewrites": [
